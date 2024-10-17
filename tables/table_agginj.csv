@@ -1,0 +1,9 @@
+Explanatory variables,Median,MAD,95%CI,PD (%),Rhat,Bulk ESS,Tail ESS
+Intercept,-3.26,0.23,"[-3.73, -2.82]",100.00,1.00,16588.88,20675.08
+Frequency of aggression,0.21,0.10,"[0.00, 0.40]",97.75,1.00,23862.68,24118.12
+Estrous status (estrous vs anestrus),1.35,0.20,"[0.97, 1.74]",100.00,1.00,28593.49,29144.23
+"Frequency of aggression x
+Estrous status",-0.09,0.11,"[-0.31, 0.14]",78.85,1.00,23570.97,24249.39
+Study period (MS19 vs MS18),0.13,0.25,"[-0.35, 0.61]",70.86,1.00,26445.18,27969.68
+Study period (MS20 vs MS18),-0.57,0.26,"[-1.08, -0.06]",98.53,1.00,25346.27,28453.53
+Study period (MS21 vs MS18),-0.16,0.22,"[-0.58, 0.27]",76.74,1.00,25198.77,27681.52

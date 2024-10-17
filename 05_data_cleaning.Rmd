@@ -1,0 +1,238 @@
+# 個体追跡データの加工    
+以下では、個体追跡データを分析のために加工します。   
+
+## 必要なデータの読み込み  
+以下、必要なデータを読み込みます。  
+```{r}
+## メスを確認した時間  
+female_time <- read_csv("../Data/data/others/female_pre_time.csv") %>% 
+  mutate(date = as_date(date))
+
+#個体の属性情報
+att <- read_csv("../Data/data/others/attributes_sp_over6.csv")
+```
+
+## データの加工  
+### メスの情報  
+まず、個体追跡データに以下のような加工を行い、新たに列を作成します。  
+
+- `groupID`: 追跡メスがどの集団にいたか  
+- `max_female`: 最大メス数  
+- `no_female`: 確認メス数  
+- `no_est`: 発情メス数  
+
+```{r}
+## 各フォーカル個体がどの集団で観察されたか  
+female_presence_group <- group_all %>% 
+  pivot_longer(Kur:Yun,
+               names_to = "subject",
+               values_to = "presence") %>% 
+  filter(presence == 1) %>% 
+  ## 2020年11月13の2つ目の集団は除く
+  filter(!groupID %in% c("m20_52")) %>% 
+  select(date, groupID, subject) 
+
+## 各観察日の最大個体  
+max_female <- female_time %>% 
+  pivot_longer(cols = Kur:Cur,
+               names_to = "femaleID",
+               values_to = "presence") %>% 
+  filter(is.na(presence)|(presence != "DD" & presence != "NS")) %>% 
+  group_by(date) %>% 
+  summarise(max_female = n()) 
+
+## 各観察日の確認メス数(6歳以上)と発情メス数
+no_female <- group_all %>% 
+  select(groupID, study_period, date, Kur:Yun) %>% 
+  select(-c(TY,IT, LK, KR, KM, TG)) %>% 
+  pivot_longer(cols = Kur:Yun,
+               names_to = "femaleID",
+               values_to = "presence") %>% 
+  left_join(att) %>% 
+  ## 6歳以上でかつ確認時刻が記録できている個体のみを抽出
+  filter(age >= 6) %>% 
+  left_join(female_all %>% select(date, femaleID, rs2)) %>% 
+  ## groupIDごとに個体数を算出
+  group_by(date, groupID, study_period) %>% 
+  summarise(no_female = sum(presence, na.rm = TRUE),
+            no_est = sum(rs2, na.rm = TRUE)) %>% 
+  ungroup()
+  
+## 結合  
+focal_combined_b <- focal_combined %>% 
+  mutate(date = as_date(date)) %>% 
+  left_join(female_presence_group,
+            by = c("subject", "date")) %>% 
+  left_join(max_female,
+            by = c("date")) %>% 
+  left_join(no_female)
+```
+
+### オスの情報  
+続いて、交尾期については追跡日に確認された群れ外オス数、オス数を追加します。  
+
+まず、生データを用いて群れ外オス数とオス数を算出します。  
+```{r}
+no_ntm_m18 <- male_18m %>% 
+  mutate(ntm = if_else(maleID %in% c("TY", "IT", "KR", "LK"),
+                       0, 1)) %>% 
+  group_by(date) %>% 
+  summarise(no_male = sum(presence, na.rm = TRUE),
+            no_ntm = sum(ntm == 1 & presence == 1, na.rm = TRUE))
+
+no_ntm_m19 <- male_19m %>% 
+  mutate(ntm = if_else(maleID %in% c("TY", "IT", "KR", "LK"),
+                       0, 1)) %>% 
+  group_by(date) %>% 
+  summarise(no_male = sum(presence, na.rm = TRUE),
+            no_ntm = sum(ntm == 1 & presence == 1, na.rm = TRUE))
+
+no_ntm_m20 <- male_20m %>% 
+  mutate(ntm = if_else(maleID %in% c("TY", "IT", "KR", "LK", "KM"),
+                       0, 1)) %>% 
+  group_by(date) %>% 
+  summarise(no_male = sum(presence, na.rm = TRUE),
+            no_ntm = sum(ntm == 1 & presence == 1, na.rm = TRUE))
+
+no_ntm_m21 <- male_21m %>% 
+  mutate(ntm = if_else(maleID %in% c("TY", "IT", "KR", "LK", "KM", "TG"),
+                       0, 1)) %>% 
+  group_by(date) %>% 
+  summarise(no_male = sum(presence, na.rm = TRUE),
+            no_ntm = sum(ntm == 1 & presence == 1, na.rm = TRUE))
+
+sum_ntm <- bind_rows(no_ntm_m18, no_ntm_m19, no_ntm_m20, no_ntm_m21)
+```
+<br/>  
+
+これを結合します。  
+```{r}
+focal_combined_c <- focal_combined_b %>% 
+  left_join(sum_ntm)
+```
+
+### TYとITの確認状況  
+調査期間中、第一位オスのタイヨウ(*TY*)と第二位オスのイツモ(*IT*)の群れへの出入りが頻繁に観察されました。  
+そこで、彼らが個体追跡時にいたか否かについての列(`TY`、`IT`)を追加します。  
+
+まず、彼らが確認できた時刻に関するデータを読み込む。  
+```{r}
+TYIT_presence_time <- read_excel("../Data/data/2019mating/2019mating_raw.xlsx",
+                                 sheet =　"male_presence_long") %>% 
+  mutate(study_period = "m19") %>% 
+  mutate(groupID = str_c(study_period,"_", groupID)) %>% 
+  select(maleID, date, groupID, male_presence, first, last) %>% 
+  bind_rows(read_excel("../Data/data/2020mating/2020mating_raw.xlsx",
+                       sheet =　"male_presence_long") %>% 
+              mutate(study_period = "m20") %>% 
+              mutate(groupID = str_c(study_period,"_", groupID)) %>% 
+              select(maleID, date, groupID, male_presence, first, last)) %>% 
+  bind_rows(read_excel("../Data/data/2021mating/2021mating_raw.xlsx",
+                       sheet =　"male_presence_long") %>% 
+              mutate(study_period = "m21") %>% 
+              mutate(groupID = str_c(study_period,"_", groupID)) %>% 
+              select(maleID, date, groupID, male_presence, first, last)) %>% 
+  bind_rows(read_excel("../Data/data/2019nonmating/2019nonmating_raw.xlsx",
+                       sheet =　"male_presence_long") %>% 
+              mutate(study_period = "nm19") %>% 
+              mutate(groupID = str_c(study_period,"_", groupID)) %>% 
+              select(maleID, date, groupID, male_presence, first, last)) %>% 
+  bind_rows(read_excel("../Data/data/2020nonmating/2020nonmating_raw.xlsx",
+                       sheet =　"male_presence_long") %>% 
+              mutate(study_period = "nm20") %>% 
+              mutate(groupID = str_c(study_period,"_", groupID)) %>% 
+              select(maleID, date, groupID, male_presence, first, last)) %>% 
+  bind_rows(read_excel("../Data/data/2021nonmating/2021nonmating_raw.xlsx",
+                       sheet =　"male_presence_long") %>% 
+              mutate(study_period = "nm21") %>% 
+              mutate(groupID = str_c(study_period,"_", groupID)) %>% 
+              select(maleID, date, groupID, male_presence, first, last)) %>% 
+  bind_rows(read_excel("../Data/data/2022nonmating/2022nonmating_raw.xlsx",
+                       sheet =　"male_presence_long") %>% 
+              mutate(study_period = "nm22") %>% 
+              mutate(groupID = str_c(study_period,"_", groupID)) %>% 
+              select(maleID, date, groupID, male_presence, first, last)) %>% 
+  mutate(across(c(first, last),
+                ~make_datetime(year(date), month(date), mday(date), hour(.),minute(.)))) 
+
+## 横長にする
+TYIT_presence_time_wide <- TYIT_presence_time %>% 
+  filter(maleID == "TY") %>% 
+  rename(first_TY = first, 
+         last_TY = last,
+         TY = male_presence) %>% 
+  select(-maleID) %>% 
+  left_join(TYIT_presence_time %>% 
+              filter(maleID == "IT") %>% 
+              rename(first_IT = first, 
+                     last_IT = last,
+                     IT = male_presence) %>% 
+              select(-maleID)) %>% 
+  mutate(date = as_date(date))
+
+TYIT_presence_time_wide
+```
+<br/>  
+
+これを利用し、個体追跡中にTYまたはITがいたと考えられるかを表す列を作成します。    
+
+- `TY_presence/IT_presence`  
+  - `1`: 個体追跡開始前または個体追跡中に*TY*を確認、かつ*TY*がいなくなったと思われる前に開始  
+  - `0`: その他  
+
+```{r}
+focal_combined_c %>% 
+  left_join(group_all %>% select(date, groupID, TY, IT)) %>% 
+  left_join(TYIT_presence_time_wide %>% select(-TY, -IT)) %>% 
+  mutate(TY_presence = case_when(
+    study_period == "m18" ~ TY,
+    is.na(first_TY) ~ 0,
+    start_time >= first_TY & start_time <= last_TY ~ 1,
+    fin_time >= first_TY ~ 1,
+    start_time >= last_TY ~ 0,
+    fin_time <= first_TY ~ 0,
+    .default = 1
+  )) %>% 
+ 　mutate(IT_presence = case_when(
+    study_period == "m18" ~ IT,
+    is.na(first_IT) ~ 0,
+    start_time >= first_IT & start_time <= last_IT ~ 1,
+    fin_time >= first_IT ~ 1,
+    start_time >= last_IT ~ 0,
+    fin_time <= first_IT ~ 0,
+    .default = 1
+  )) -> focal_combined_d
+```
+
+### フォーカルを攻撃したオスのID  
+最後に、フォーカルが攻撃を受けた際の攻撃したオスのIDを表す列を作成します。     
+```{r}
+focal_combined_d %>% 
+  ## NAになっているところを0に
+  replace_na(list(agg_focal = 0)) %>% 
+  replace_na(list(victim1 = "NA", victim2 = "NA", victim3 = "NA",
+                  aggressor1 = "NA", aggressor2 = "NA", aggressor = "NA")) %>% 
+  mutate(if_victim1 = ifelse(agg_focal == 1 & str_detect(victim1, subject), 1, 0),
+         if_victim2 = ifelse(agg_focal == 1 & str_detect(victim2, subject), 1, 0),
+         if_victim3 = ifelse(agg_focal == 1 & str_detect(victim3, subject), 1, 0)) %>% 
+  mutate(aggressor_focal = case_when(
+    if_victim1 == 1 & if_victim2 == 1 & if_victim3 == 1 ~ str_c(aggressor1,aggressor2,aggressor3,sep =","),
+    if_victim1 == 1 & if_victim2 == 1 ~ str_c(aggressor1, aggressor2,sep =","),
+    if_victim1 == 1 & if_victim3 == 1 ~ str_c(aggressor1, aggressor3,sep =","),
+    if_victim2 == 1 & if_victim3 == 1 ~ str_c(aggressor2, aggressor3,sep =","),
+    if_victim1 == 1 ~ aggressor1,
+    if_victim2 == 1 ~ aggressor2,
+    if_victim3 == 1 ~ aggressor3,
+    .default = NA
+  )) %>% 
+  ## aggressor2には、追跡個体が同時刻に2頭から攻撃を受けたときのみ値が入る　　
+  separate(aggressor_focal, into = c("aggressor_focal1","aggressor_focal2"), 
+           sep = ",") -> focal_combined_final
+```
+
+加工したデータは以下の通り。  
+```{r}
+datatable(focal_combined_final,
+          options = list(scrollX = 60),
+          filter = list(position ="top"))
+```

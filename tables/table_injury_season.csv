@@ -1,0 +1,4 @@
+Explanatory variables,Median,MAD,95%CI,PD (%),Rhat,Bulk ESS,Tail ESS
+Intercept,-3.46,0.17,"[-3.82, -3.14]",100.00,1.00,11705.27,16263.94
+MS(estrous) vs MS(anestrus),1.69,0.14,"[1.41, 1.97]",100.00,1.00,36800.61,28538.69
+NMS vs MS(anestrus),-0.74,0.19,"[-1.12, -0.39]",100.00,1.00,41942.67,29309.59

@@ -1,0 +1,975 @@
+# 休息中の凝集性に影響する要因  
+以下の分析では、オスからの攻撃のリスクが群れの凝集性に影響するかを検討する。  
+
+## データの加工  
+まず、休息集団内のメス数と、3m以内のメス数、5m以内のメス数(2019は除く)を算出する。また、近接に群れオスがいたかを示した列を作成する。  
+```{r}
+## 近接メス情報の作成  
+adult18 <- unique(female18 %>% filter(age >= 6) %>% .$femaleID)
+adult19 <- unique(female19 %>% filter(age >= 6) %>% .$femaleID)
+adult20 <- unique(female20 %>% filter(age >= 6) %>% .$femaleID)
+adult21 <- unique(female21 %>% filter(age >= 6) %>% .$femaleID)
+
+focal_raw_fin %>% 
+  separate(x0_1m, into = str_c("x0_1m",1:11), sep = ",") %>% 
+  separate(x1_3m, into = str_c("x1_3m",1:15), sep = ",") %>% 
+  separate(x3_5m, into = str_c("x3_5m",1:16), sep = ",") %>% 
+  separate(x5_10m, into = str_c("x5_10m", 1:9), sep = ",")  %>% 
+  pivot_longer(cols = x0_1m1:x5_10m5,
+               names_to = "proximity",
+               values_to = "ID") %>% 
+  mutate(proximity = ifelse(str_detect(proximity,"x0_1m"),"x0_1m",
+                            ifelse(str_detect(proximity,"x1_3m"),"x1_3m",
+                                   ifelse(str_detect(proximity,"x3_5m"),"x3_5m",
+                                          ifelse(str_detect(proximity,"x5_10m"),"x5_10m","NA"))))) %>% 
+  filter(!is.na(ID)) -> focal_prox
+
+## 休息集団
+RG_female <- focal_prox %>% 
+  filter(RG == "1") %>% 
+  filter((study_period == "m18" & ID %in% adult18)|(study_period == "m19" & ID %in% adult19)|
+           (study_period == "m20" & ID %in% adult20)|(study_period == "m21" & ID %in% adult21)) %>% 
+  group_by(date, no_focal, time) %>% 
+  summarise(RGfemale = n()) %>% 
+  ungroup()
+
+## 休息集団内の発情メス数
+focal_prox %>% 
+  filter(RG == "1") %>% 
+  filter((study_period == "m18" & ID %in% adult18)|(study_period == "m19" & ID %in% adult19)|
+           (study_period == "m20" & ID %in% adult20)|(study_period == "m21" & ID %in% adult21)) %>% 
+  select(date, no_focal, time, ID) %>% 
+  left_join(female_all %>% select(date, femaleID, rs2), by = c("date","ID" = "femaleID")) %>% 
+  filter(rs2 == "1") %>% 
+  group_by(date, no_focal, time) %>% 
+  summarise(RGest = n()) -> RGest_female 
+
+## 休息集団内に各オスがいるか否か  
+RG_TY <- focal_prox %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "TY") %>% 
+  mutate(RG_TY = 1) %>% 
+  select(-ID)
+
+RG_IT <- focal_prox %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "IT") %>% 
+  mutate(RG_IT = 1) %>% 
+  select(-ID)
+
+RG_LK <- focal_prox %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "LK") %>% 
+  mutate(RG_LK = 1) %>% 
+  select(-ID)
+
+RG_KR <- focal_prox %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "KR") %>% 
+  mutate(RG_KR = 1) %>% 
+  select(-ID)
+
+## 3m、5m近接  
+focal_prox %>% 
+  mutate(ID = str_replace(ID, "\\(F\\)","")) %>% 
+  mutate(ID = str_replace(ID, "\\(M\\)","")) %>% 
+  mutate(ID = str_replace(ID, "\\(O\\)","")) %>% 
+  mutate(ID = str_replace(ID, "\\(N\\)","")) %>% 
+  mutate(ID = str_replace(ID, "\\(n\\)","")) %>% 
+  filter((study_period == "m18" & ID %in% adult18)|(study_period == "m19" & ID %in% adult19)|
+           (study_period == "m20" & ID %in% adult20)|(study_period == "m21" & ID %in% adult21)) -> focal_prox_all
+  
+focal_prox_all %>% 
+  filter(proximity %in% c("x0_1m","x1_3m")) %>% 
+  group_by(date, no_focal, time) %>% 
+  summarise(x3m_female = n()) %>% 
+  ungroup() -> x3m_female
+
+focal_prox_all %>% 
+  filter(proximity %in% c("x0_1m","x1_3m","x3_5m")) %>% 
+  group_by(date, no_focal, time) %>% 
+  summarise(x5m_female = n()) %>% 
+  ungroup() -> x5m_female
+
+## 元データに結合  
+focal_raw_fin %>% 
+  left_join(RG_female, by = c("date","no_focal","time")) %>% 
+  left_join(RGest_female, by = c("date","no_focal","time")) %>% 
+  left_join(x3m_female, by = c("date","no_focal","time")) %>% 
+  left_join(x5m_female, by = c("date","no_focal","time")) %>% 
+  left_join(RG_TY, by = c("date","no_focal","time")) %>% 
+  left_join(RG_IT, by = c("date","no_focal","time")) %>% 
+  left_join(RG_LK, by = c("date","no_focal","time")) %>% 
+  left_join(RG_KR, by = c("date","no_focal","time")) %>% 
+  replace_na(list(RGfemale = 0, RGest = 0, x3m_female = 0, x5m_female =0, RG_TY = 0,
+                  RG_IT = 0, RG_LK = 0, RG_KR = 0)) %>% 
+  replace_na(list(x0_1m = "NA",x1_3m = "NA", x3_5m = "NA", x5_10m = "NA")) %>% 
+  mutate(RGfemale_plus1 = RGfemale + 1) %>% 
+  ## TYとITの情報を追加  
+  mutate(TY_10m = ifelse(str_detect(x0_1m,"TY")|str_detect(x1_3m,"TY")|str_detect(x3_5m,"TY")|str_detect(x5_10m,"TY"),1,0),
+         TY_5m = ifelse(str_detect(x0_1m,"TY")|str_detect(x1_3m,"TY")|str_detect(x3_5m,"TY"),1,0),
+         TY_3m = ifelse(str_detect(x0_1m,"TY")|str_detect(x1_3m,"TY"),1,0)) %>% 
+  mutate(IT_10m = ifelse(str_detect(x0_1m,"IT")|str_detect(x1_3m,"IT")|str_detect(x3_5m,"IT")|str_detect(x5_10m,"IT"),1,0),
+         IT_5m = ifelse(str_detect(x0_1m,"IT")|str_detect(x1_3m,"IT")|str_detect(x3_5m,"IT"),1,0),
+         IT_3m = ifelse(str_detect(x0_1m,"IT")|str_detect(x1_3m,"IT"),1,0)) %>% 
+  mutate(KR_10m = ifelse(str_detect(x0_1m,"KR")|str_detect(x1_3m,"KR")|str_detect(x3_5m,"KR")|str_detect(x5_10m,"KR"),1,0),
+         KR_5m = ifelse(str_detect(x0_1m,"KR")|str_detect(x1_3m,"KR")|str_detect(x3_5m,"KR"),1,0),
+         KR_3m = ifelse(str_detect(x0_1m,"KR")|str_detect(x1_3m,"KR"),1,0)) %>% 
+  mutate(LK_10m = ifelse(str_detect(x0_1m,"LK")|str_detect(x1_3m,"LK")|str_detect(x3_5m,"LK")|str_detect(x5_10m,"LK"),1,0),
+         LK_5m = ifelse(str_detect(x0_1m,"LK")|str_detect(x1_3m,"LK")|str_detect(x3_5m,"LK"),1,0),
+         LK_3m = ifelse(str_detect(x0_1m,"LK")|str_detect(x1_3m,"LK"),1,0)) %>% 
+  left_join(base_all %>% select(date,temp_am,temp_pm)) -> focal_raw_prox
+```
+
+その日群れ内にいた血縁個体数を書く。  
+```{r}
+kin <- read_csv("data/kin.csv")
+
+focal_raw_fin %>% 
+  distinct(study_period, date,no_focal, subject) %>% 
+  left_join(female_all %>% select(date, femaleID, presence)) %>% 
+  filter(!(subject == femaleID)) %>% 
+  left_join(kin, by = c("study_period", "subject","femaleID")) %>% 
+  mutate(kin_presence = ifelse(presence == "1" & kin > 0.0625,1,0)) %>% 
+  left_join(att, by = c("study_period","femaleID")) %>% 
+  filter(age >= 6) %>% 
+  group_by(no_focal, date, subject) %>%
+  summarise(no_kin = sum(kin_presence)) %>% 
+  ungroup() -> focal_numkin
+
+focal_raw_prox %>% 
+  left_join(focal_numkin, by = c("no_focal","date","subject")) -> focal_raw_prox_b
+```
+
+TYとの親密度(CSI)の情報も結合する。  
+```{r}
+TY_csi <- read_csv("data/TY_csi.csv")
+
+focal_raw_prox_b %>% 
+  left_join(TY_csi, by = c("subject" = "ID")) -> focal_raw_prox_c
+```
+
+
+その日観察したオトナメスへの攻撃頻度も追加する。各観察日に観察された群れオス/群れ外オスからの攻撃の頻度を算出し、個体追跡データにくっつける。    
+```{r}
+aggression_all %>% 
+  left_join(males, by = c("aggressor" = "maleID","study_period")) %>% 
+  drop_na(ntm) %>% 
+  group_by(date, ntm) %>% 
+  summarise(agg = n()) %>% 
+  ungroup() %>% 
+  pivot_wider(names_from = ntm,
+              values_from = agg) %>% 
+  rename("agg_tm" = 2, "agg_ntm" = 3) %>% 
+  left_join(base_all %>% select(date, duration)) %>% 
+  filter(duration >= 300) %>% 
+  replace_na(list(agg_tm = 0, agg_ntm = 0)) %>% 
+  mutate(rate_tm = agg_tm*60/duration,
+         rate_ntm = agg_ntm*60/duration) -> aggression_daily
+
+aggression_all %>% 
+  group_by(date) %>% 
+  summarise(agg = n()) %>% 
+  ungroup() %>% 
+  left_join(base_all %>% select(date, duration)) %>% 
+  filter(duration >= 300) %>% 
+  replace_na(list(agg = 0)) %>% 
+  mutate(rate_agg = agg*60/duration) -> aggression_daily_all
+  
+
+focal_raw_prox_c %>% 
+  left_join(aggression_daily, by = "date") %>% 
+  left_join(aggression_daily_all, by = "date") -> focal_raw_prox_fin
+```
+
+作成したデータは以下の通り。  
+```{r}
+datatable(focal_raw_prox_fin,
+          options = list(scrollX = 80),
+          filter = list(position = "top"))
+```
+
+## 群れ外オス数やTY、ITの有無と群れ内の凝集性の関連   
+まず、5分ごとの休息集団サイズをしようして分析を行う。   
+
+### データの加工  
+5分ごとのデータを抽出する。なお、以下の条件を満たすもののみを抽出した。  
+
+- 地上休息のみを抽出  
+- 6歳以上のメスが50%以上観察できたときのみのデータを使用する。   
+- 3位以下のオスまたは群れ外オスとコンソートしていた個体追跡セッションは除外した。  
+- ハドリングをしていたポイントは除外。  
+
+```{r}
+focal_raw_prox_fin %>% 
+  mutate(rate_female = no_female/max_female) %>% 
+  filter(max_female >= 0.5) %>% 
+  filter(consort <= 2) %>% 
+  replace_na(list(hud = 0)) %>% 
+  filter(hud != "1") %>% 
+  filter(RG == "1")  %>% 
+  filter(time %% 5 == 0) %>% 
+  mutate(cen_ntm = no_ntm - mean(no_ntm, na.rm = TRUE),
+         cen_est = no_est - mean(no_est, na.rm = TRUE)) %>% 
+  mutate(N = 1:n()) %>% 
+  mutate(RGfemale_plus1 = RGfemale + 1,
+         logfemale = log(no_female),
+         no_female2 = no_female-1) -> focal_rest
+```
+
+### 群れ外オス数やオスの有無による休息集団サイズの変動  
+まず、群れ外オス数や*TY*の有無によって休息集団サイズがどのように変化するかを検討する。以下、事前分布には弱情報事前分布を用いた。    
+
+#### モデリング      
+*IT*の有無は入れるのが難しいので、含めないでモデリングする。  
+
+- 分布: ベータ二項分布  
+- 応答変数: その日確認したメスの内、休息集団にいた個体の割合  
+- 説明変数: 群れ外オス数、TYの有無、これらの交互作用、発情メス数、群れ内の血縁個体数、調査期間、発情の有無    
+- ランダム切片: 追跡個体名、フォーカルセッション名  
+
+```{r}
+m_RGsize_all2 <- brm(data = focal_rest,
+                    RGfemale|trials(no_female2) ~ cen_ntm*TY + no_est + no_kin + study_period + rs2 + 
+                      (1|subject) + (1|no_focal),
+                    family = "beta_binomial",
+                     prior = c(prior(student_t(4,0,10), class = "b"),
+                           prior(student_t(4,0,10), class = "Intercept"),
+                           prior(student_t(4,0,10), class = "sd")),
+                    control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                    iter = 5000, warmup = 2500, seed = 13,
+                    backend = "cmdstanr",
+                    file = "model/m_RGsize_all2.rds")
+```
+
+##### モデルチェック  
+
+過分散の問題はないよう。分布への当てはまりは悪い？    
+```{r, include = FALSE}
+check_RGsize_all2 <- dh_check_brms(m_RGsize_all2)
+```
+
+```{r, fig.dim = c(4.5,4.5)}
+plotQQunif(check_RGsize_all2)
+```
+
+ゼロがモデルが想定するよりも少ない?  
+```{r, fig.dim = c(4.5,4.5)}
+testZeroInflation(check_RGsize_all2)
+```
+
+多重共線性の問題はない。  
+```{r}
+check_collinearity(m_RGsize_all2)
+```
+
+##### 結果の確認   
+TYの有無、血縁個体数、発情の有無が有意だった。  
+```{r}
+model_parameters(m_RGsize_all2) %>% 
+  data.frame() %>% 
+  select(c(1,3,5,6)) %>%   
+  filter(Parameter != "phi") %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),",",sprintf("%.2f",CI_high),"]")) %>% 
+  mutate(Median = sprintf("%.2f",Median)) %>% 
+  select(1,2,5) %>% 
+  mutate(Parameter = str_replace(Parameter,"b_","")) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("Intercept" = "切片","cen_ntm" = "群れ外オス数","rs2" = "発情有(vs 無)",
+                                              "TY" = "TY(在 vs 不在)", "study_periodm20" = "2020年(vs 2019年)",
+                                              "study_periodm21" = "2021年(vs 2019年)", "cen_ntm:rs2" = "群れ外オス数×発情の有無",
+                                              ":" = "×", "no_kin" = "観察日の血縁個体数","no_est" = "観察日の発情メス数"))) %>% 
+  rename("説明変数" =1, "係数の推定値" = 2) %>% 
+  flextable() %>% 
+  theme_zebra() %>% 
+  colformat_double(digits=2) %>% 
+  set_table_properties(layout="autofit",width = 1) %>% 
+  align(j=2:3,part = "all",align = "center") %>% 
+  font(part = "header", fontname = "Yu Mincho") %>% 
+  font(part = "body", j=2:3, fontname = "Times New Roman") %>% 
+  font(part = "body", j=1, fontname = "Yu Mincho") %>% 
+  width(j=c(1), width = 2.3) %>% 
+  width(j = 2, width = 1.5) -> table_RGsize_all
+
+table_RGsize_all
+
+save_as_image(table_RGsize_all, "table/table_RGsize_all.png")
+```
+<br/> 
+
+交互作用項のある結果は以下の通り。TYが群れにいるときは、群れ外オスの効果が有意な傾向だった(90%確信区間が0を含まない)。
+```{r}
+estimate_slopes(m_RGsize_all2,
+                trend = "cen_ntm",
+                at = c("TY = c(0,1)"),
+                ci = 0.95) -> m_RGsize_int0.95
+
+estimate_slopes(m_RGsize_all2,
+                trend = "cen_ntm",
+                at = c("TY = c(0,1)"),
+                ci = 0.9) -> m_RGsize_int0.9
+
+bind_cols(m_RGsize_int0.95 %>% data.frame() %>% select(-5),  
+          m_RGsize_int0.9 %>% data.frame() %>%  select(3,4) %>% rename("CI_low2" = 1, "CI_high2" = 2)) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),",",sprintf("%.2f",CI_high),"]")) %>% 
+  mutate("90%CI" = str_c("[",sprintf("%.2f",CI_low2),",",sprintf("%.2f",CI_high2),"]")) %>% 
+  mutate(Coefficient = sprintf("%.2f",Coefficient)) %>% 
+  select(1,2,7,8) %>% 
+  mutate(TY = str_replace_all(TY, c("0" = "不在", "1" = "在"))) %>% 
+  rename("TYの確認状況" =1, "群れ外オス数の効果" = 2) %>% 
+  flextable() %>% 
+  theme_zebra() %>% 
+  colformat_double(digits=2) %>% 
+  set_table_properties(layout="autofit",width = 1) %>% 
+  align(j=2:4,part = "all",align = "center") %>% 
+  align(j=1, part = "all",align = "left") %>% 
+  font(part = "header", fontname = "Yu Mincho") %>% 
+  font(part = "body", j=2:4, fontname = "Times New Roman") %>% 
+  font(part = "body", j=1, fontname = "Yu Mincho") %>% 
+  width(j = 2, width =2) %>% 
+  width(j = 1, width =1.3)-> table_RGsize_int1
+
+table_RGsize_int1
+
+# save_as_image(table_RGsize_int1, "table/table_RGsize_int1.png")
+```
+<br/> 
+
+群れ外オス数に応じて、TYがいるときといないときの休息集団内のメスの割合の違いがどのように変わるかを調べる。  
+```{r}
+estimate_contrasts(m_RGsize_all2,
+                   contrast = "TY = c(0,1)",
+                   at = "cen_ntm",
+                   length = 30) -> cont_RGsize_TY
+
+cont_RGsize_TY %>%
+  data.frame() %>% 
+  mutate(no_ntm = cen_ntm + mean(focal_rest$no_ntm, na.rm = TRUE)) %>% 
+  ggplot(aes(x = no_ntm, y = -Difference))+
+  geom_line() +
+  geom_ribbon(aes(ymin = -CI_low,
+                  ymax = -CI_high),
+              alpha = 0.2)+
+  geom_hline(yintercept = 0,
+             color = "black",
+             linetype = "dashed") +
+  theme_bw(base_size = 14)+
+  theme(aspect.ratio = 1,
+        plot.title = element_text(size = 13))+
+  scale_x_continuous(breaks = seq(0,13,1))+
+  labs(title = "",
+       y = "T\nY\nが\nい\nる\nこ\nと\nに\nよ\nる\n効\n果",
+       x = "群れ外オス数")+
+  scale_x_continuous(breaks = seq(0,13,2))+
+  scale_fill_nejm()+
+  scale_color_nejm()+
+  theme(axis.title.y = element_text(angle = 0,
+                                    vjust = 0.5,
+                                    family = "Yu Mincho"),
+        axis.title.x = element_text(family = "Yu Mincho"),
+        axis.text.x = element_text(family = "Yu Mincho"),
+        axis.text.y = element_text(family = "Times New Roman",
+                                   size = 12),
+        strip.text = element_text(family = "Yu Mincho",
+                                  hjust = 0),
+        strip.background = element_blank(),
+        aspect.ratio = 1)  -> p_cont_RGsize_TY
+
+p_cont_RGsize_TY 
+
+# ggsave("figure/p_cont_RGsize_TY.png", p_cont_RGsize_TY, dpi = 600, width =100, height =100, units = "mm")
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap="群れ外オス数ごとのTYの在/不在の効果"}
+knitr::include_graphics("figure/p_cont_RGsize_TY.png")
+```
+
+実際の確率のスケールに直す。  
+```{r}
+nd_RG <- tidyr::crossing(cen_ntm = seq(min(focal_rest$cen_ntm,na.rm = TRUE),
+                                               max(focal_rest$cen_ntm,na.rm = TRUE),length.out = 50),
+                         TY = c(0,1),
+                         no_est = mean(focal_rest$no_est,na.rm = TRUE),
+                         rs2 = 0.5,
+                         study_period = c("m19","m20","m21"),
+                         no_kin = mean(focal_rest$no_kin,na.rm = TRUE))
+
+
+## 違いの95%確信区間を算出  
+posterior_samples(m_RGsize_all2) %>% 
+  select(1:9) %>% 
+  rename("In" = 1, "b_ntm" = 2, "b_TY" = 3, "b_est" = 4, "b_kin" = 5,"m20" = 6, "m21" = 7, "b_rs" = 8, "b_int" = 9) %>% 
+  tidyr::expand(nd_RG,
+         nesting(In, b_ntm,b_TY, b_rs, b_est,b_kin, m20, m21, b_int)) %>%  
+  mutate(p = ifelse(study_period == "m19", 
+            inv_logit_scaled(In + b_ntm*cen_ntm + b_rs*rs2 + b_TY*TY + b_kin*no_kin + b_est*no_est + b_int*cen_ntm*TY),
+             ifelse(study_period == "m20", 
+            inv_logit_scaled(In + m20 + b_ntm*cen_ntm + b_rs*rs2 + b_TY*TY + b_kin*no_kin + b_est*no_est + b_int*cen_ntm*TY),
+             ifelse(study_period == "m21", 
+            inv_logit_scaled(In + m21 + b_ntm*cen_ntm + b_rs*rs2 + b_TY*TY + b_kin*no_kin + b_est*no_est + b_int*cen_ntm*TY),NA)))) %>% 
+  mutate(p = as.numeric(p)) -> posterior_RGsize 
+
+posterior_RGsize %>% 
+  pivot_wider(names_from = TY, values_from = p) %>% 
+  mutate(diff = `0` - `1`) %>% 
+  group_by(cen_ntm, study_period) %>% 
+  summarise(Difference = mean(diff),
+            CI_low = quantile(diff, 0.025),
+            CI_high = quantile(diff, 0.975)) -> cont_RGsize_TY_prob
+  
+ ## 作図  
+cont_RGsize_TY_prob %>% 
+  mutate(no_ntm = cen_ntm + mean(focal_rest$no_ntm, na.rm = TRUE)) %>% 
+  ggplot(aes(x = no_ntm, y = -Difference))+
+  geom_line() +
+  geom_ribbon(aes(ymin = -CI_low,
+                  ymax = -CI_high),
+              alpha = 0.2)+
+  geom_hline(yintercept = 0,
+             color = "black",
+             linetype = "dashed") +
+  theme_bw(base_size = 14)+
+  theme(aspect.ratio = 1,
+        plot.title = element_text(size = 13))+
+  scale_x_continuous(breaks = seq(0,13,1))+
+  labs(title = "",
+       y = "P",
+       x = "群れ外オス数")+
+  scale_x_continuous(breaks = seq(0,13,2))+
+  scale_fill_nejm()+
+  scale_color_nejm()+
+  facet_rep_wrap(~study_period,
+                 repeat.tick.labels = TRUE,
+                 ncol = 2,
+                 labeller = as_labeller(c("m19" = "2019年", "m20" = "2020年","m21" = "2021年")))+
+  theme(axis.title.y = element_text(angle = 0,
+                                    vjust = 0.5,
+                                    family = "Times New Roman"),
+        axis.title.x = element_text(family = "Yu Mincho"),
+        axis.text.x = element_text(family = "Yu Mincho"),
+        axis.text.y = element_text(family = "Times New Roman",
+                                   size = 12),
+        strip.text = element_text(family = "Yu Mincho",
+                                  hjust = 0),
+        strip.background = element_blank(),
+        aspect.ratio = 1) -> p_cont_RGsize_TY_prob
+
+p_cont_RGsize_TY_prob
+
+# ggsave("figure/p_cont_RGsize_TY_prob.png", p_cont_RGsize_TY_prob, dpi = 600, width =200, height =200, units = "mm")
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap="群れ外オス数ごとのTYの在/不在によるメスが休息集団にいる確率の違い"}
+knitr::include_graphics("figure/p_cont_RGsize_TY_prob.png")
+```
+
+##### 結果の作図   
+```{r}
+posterior_RGsize %>% 
+  group_by(TY, cen_ntm, study_period) %>% 
+  summarise(Mean = mean(p),
+            CI_low = quantile(p, 0.025),
+            CI_high = quantile(p, 0.975)) %>% 
+  ungroup() %>% 
+  mutate(no_ntm = cen_ntm + mean(focal_rest$no_ntm, na.rm = TRUE)) %>% 
+  mutate(study_period = str_c("20",str_sub(study_period,2,3),"年"))-> fit_Rsize_TY
+
+focal_rest %>% 
+  filter(TY != "2") %>% 
+  mutate(study_period = str_c("20",str_sub(study_period,2,3),"年")) %>% 
+  ggplot(aes(x = no_ntm, y = RGfemale/no_female2))+
+  geom_count()+
+  geom_line(data = fit_Rsize_TY,
+            aes(y = Mean, color = study_period))+
+  geom_ribbon(data = fit_Rsize_TY,
+              aes(y = Mean, fill = study_period,
+                  ymin = CI_low, ymax = CI_high),
+              alpha = 0.2)+
+  theme_bw(base_size = 15)+
+  facet_rep_wrap(~TY, repeat.tick.labels = TRUE,
+                 labeller = as_labeller(c("0" = "TYが群れにいない",
+                                          "1" = "TYが群れにいる")))+
+  scale_color_nejm()+
+  scale_fill_nejm()+
+  labs(y = "休\n息\n集\n団\nに\nい\nた\nメ\nス\nの\n割\n合",
+       x = "群れ外オス数", color = "調査期間", fill = "調査期間")+
+  scale_x_continuous(breaks = seq(0,14,2))+
+  theme(aspect.ratio = 1,
+        strip.background = element_blank(),
+        axis.text.x =  element_text(family = "Yu Mincho"),
+        axis.title.y = element_text(family = "Yu Mincho",
+                                    angle = 0,
+                                    vjust = 0.5),
+        axis.title.x = element_text(family = "Yu Mincho"),
+        legend.text = element_text(family = "Yu Mincho"),
+        legend.title = element_text(family = "Yu Mincho"),
+        axis.text.y = element_text(family = "Times New Roman"),
+        strip.text = element_text(hjust = 0,
+                                  family = "Yu Mincho")) -> p_RGsize_TY
+
+# ggsave("figure/p_RGsize_TY.png", p_RGsize_TY, dpi = 600, width =240, height =100, units = "mm")
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap="群れ外オス数とTYの在/不在によるメスが休息集団にいるメスの割合"}
+knitr::include_graphics("figure/p_RGsize_TY.png")
+```
+
+
+### 群れ外オス数やオスの有無による3m以内のメス数の変動  
+続いて、群れ外オス数や*TY*の有無によって休息集団サイズがどのように変化するかを検討する。
+
+#### モデリング      
+*IT*の有無は入れるのが難しいので、含めないでモデリングする。  
+
+- 分布: ベータ二項分布  
+- 応答変数: その日確認したメスの内、休息集団にいた個体の割合  
+- 説明変数: 群れ外オス数、TYの有無、これらの交互作用、発情メス数、群れ内の血縁個体数、調査期間、発情の有無    
+- ランダム切片: 追跡個体名、フォーカルセッション名  
+
+```{r}
+m_female_prox <- brm(data = focal_rest,
+                    x3m_female|trials(no_female2) ~ cen_ntm*TY + no_est + no_kin + study_period + rs2 + (1|subject) + (1|no_focal),
+                    family = "beta_binomial",
+                    prior = c(prior(student_t(4,0,10), class = "b"),
+                           prior(student_t(4,0,10), class = "Intercept"),
+                           prior(student_t(4,0,10), class = "sd")),
+                    control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                    iter = 5000, warmup = 2500, seed = 17,
+                    backend = "cmdstanr",
+                    file = "model/m_female_prox.rds")
+```
+
+##### モデルチェック  
+
+過分散や外れ値の問題はないよう。少し分布への当てはまりは悪い？    
+```{r, include = FALSE}
+check_female_prox <- dh_check_brms(m_female_prox)
+```
+
+```{r, fig.dim = c(4.5,4.5)}
+plotQQunif(check_female_prox)
+```
+
+多重共線性の問題はない。  
+```{r}
+check_collinearity(m_female_prox)
+```
+
+##### 結果の確認  
+モデルの結果は以下の通り。`Rhat`はすべて1.01以下であり、収束の問題はないと思われる。有向サンプルサイズにも大きな問題はない。  
+
+休息集団サイズと同様に、TYの有無、血縁個体数、発情の有無が有意だった。  
+```{r}
+model_parameters(m_female_prox) %>% 
+  data.frame() %>% 
+  select(c(1,3,5,6)) %>%   
+  filter(Parameter != "phi") %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),",",sprintf("%.2f",CI_high),"]")) %>% 
+  mutate(Median = sprintf("%.2f",Median)) %>% 
+  select(1,2,5) %>% 
+  mutate(Parameter = str_replace(Parameter,"b_","")) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("Intercept" = "切片","cen_ntm" = "群れ外オス数","rs2" = "発情有(vs 無)",
+                                              "TY" = "TY(在 vs 不在)", "study_periodm20" = "2020年(vs 2019年)",
+                                              "study_periodm21" = "2021年(vs 2019年)", "cen_ntm:rs2" = "群れ外オス数×発情の有無",
+                                              ":" = "×", "no_kin" = "観察日の血縁個体数","no_est" = "観察日の発情メス数"))) %>% 
+  rename("説明変数" =1, "係数の推定値" = 2) %>% 
+  flextable() %>% 
+  theme_zebra() %>% 
+  colformat_double(digits=2) %>% 
+  set_table_properties(layout="autofit",width = 1) %>% 
+  align(j=2:3,part = "all",align = "center") %>% 
+  font(part = "header", fontname = "Yu Mincho") %>% 
+  font(part = "body", j=2:3, fontname = "Times New Roman") %>% 
+  font(part = "body", j=1, fontname = "Yu Mincho") %>% 
+  width(j=c(1), width = 2.3) %>% 
+  width(j = 2, width = 1.5) -> table_female_prox
+
+table_female_prox
+
+# save_as_image(table_female_prox, "table/table_female_prox.png")
+```
+<br/> 
+
+交互作用項のある結果は以下の通り。*TY*が群れにいるときは、群れ外オスの効果が有意な傾向だった(90%確信区間が0を含まない)。
+```{r}
+estimate_slopes(m_female_prox,
+                trend = "cen_ntm",
+                at = c("TY = c(0,1)"),
+                ci = 0.95) -> m_prox_int0.95
+
+estimate_slopes(m_female_prox,
+                trend = "cen_ntm",
+                at = c("TY = c(0,1)"),
+                ci = 0.9) -> m_prox_int0.9
+
+bind_cols(m_RGsize_int0.95 %>% data.frame() %>% select(-5),  
+          m_RGsize_int0.9 %>% data.frame() %>%  select(3,4) %>% rename("CI_low2" = 1, "CI_high2" = 2)) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),",",sprintf("%.2f",CI_high),"]")) %>% 
+  mutate("90%CI" = str_c("[",sprintf("%.2f",CI_low2),",",sprintf("%.2f",CI_high2),"]")) %>% 
+  mutate(Coefficient = sprintf("%.2f",Coefficient)) %>% 
+  select(1,2,7,8) %>% 
+  mutate(TY = str_replace_all(TY, c("0" = "不在", "1" = "在"))) %>% 
+  rename("TYの確認状況" =1, "群れ外オス数の効果" = 2) %>% 
+  flextable() %>% 
+  theme_zebra() %>% 
+  colformat_double(digits=2) %>% 
+  set_table_properties(layout="autofit",width = 1) %>% 
+  align(j=2:4,part = "all",align = "center") %>% 
+  align(j=1, part = "all",align = "left") %>% 
+  font(part = "header", fontname = "Yu Mincho") %>% 
+  font(part = "body", j=2:4, fontname = "Times New Roman") %>% 
+  font(part = "body", j=1, fontname = "Yu Mincho") %>% 
+  width(j = 2, width =2) %>% 
+  width(j = 1, width =1.3)-> table_prox_int1
+
+table_prox_int1
+
+# save_as_image(table_prox_int1, "table/table_prox_int1.png")
+```
+<br/> 
+
+群れ外オス数に応じて、TYがいるときといないときの休息集団内のメスの割合の違いがどのように変わるかを調べる。  
+```{r}
+estimate_contrasts(m_female_prox,
+                   contrast = "TY = c(0,1)",
+                   at = "cen_ntm",
+                   length = 30) -> cont_female_prox
+
+cont_female_prox %>%
+  data.frame() %>% 
+  mutate(no_ntm = cen_ntm + mean(focal_rest$no_ntm, na.rm = TRUE)) %>% 
+  ggplot(aes(x = no_ntm, y = -Difference))+
+  geom_line() +
+  geom_ribbon(aes(ymin = -CI_low,
+                  ymax = -CI_high),
+              alpha = 0.2)+
+  geom_hline(yintercept = 0,
+             color = "black",
+             linetype = "dashed") +
+  theme_bw(base_size = 14)+
+  theme(aspect.ratio = 1,
+        plot.title = element_text(size = 13))+
+  scale_x_continuous(breaks = seq(0,13,1))+
+  labs(title = "",
+       y = "T\nY\nが\nい\nる\nこ\nと\nに\nよ\nる\n効\n果",
+       x = "群れ外オス数")+
+  scale_x_continuous(breaks = seq(0,13,2))+
+  scale_fill_nejm()+
+  scale_color_nejm()+
+  theme(axis.title.y = element_text(angle = 0,
+                                    vjust = 0.5,
+                                    family = "Yu Mincho"),
+        axis.title.x = element_text(family = "Yu Mincho"),
+        axis.text.x = element_text(family = "Yu Mincho"),
+        axis.text.y = element_text(family = "Times New Roman",
+                                   size = 12),
+        strip.text = element_text(family = "Yu Mincho",
+                                  hjust = 0),
+        strip.background = element_blank(),
+        aspect.ratio = 1)  -> p_cont_female_prox
+
+p_cont_female_prox
+
+# ggsave("figure/p_cont_female_prox.png", p_cont_female_prox, dpi = 600, width =100, height =100, units = "mm")
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap="群れ外オス数ごとのTYの在/不在の効果"}
+knitr::include_graphics("figure/p_cont_female_prox.png")
+```
+
+実際の確率のスケールに直す。  
+```{r}
+nd_prox <- tidyr::crossing(cen_ntm = seq(min(focal_rest$cen_ntm,na.rm = TRUE),
+                                               max(focal_rest$cen_ntm,na.rm = TRUE),length.out = 50),
+                         TY = c(0,1),
+                         no_est = mean(focal_rest$no_est,na.rm = TRUE),
+                         rs2 = 0.5,
+                         study_period = c("m19","m20","m21"),
+                         no_kin = mean(focal_rest$no_kin,na.rm = TRUE))
+
+
+## 違いの95%確信区間を算出  
+posterior_samples(m_female_prox) %>% 
+  select(1:9) %>% 
+  rename("In" = 1, "b_ntm" = 2, "b_TY" = 3, "b_est" = 4, "b_kin" = 5,"m20" = 6, "m21" = 7, "b_rs" = 8, "b_int" = 9) %>% 
+  tidyr::expand(nd_prox,
+         nesting(In, b_ntm,b_TY, b_rs, b_est,b_kin, m20, m21, b_int)) %>%  
+  mutate(p = ifelse(study_period == "m19", 
+            inv_logit_scaled(In + b_ntm*cen_ntm + b_rs*rs2 + b_TY*TY + b_kin*no_kin + b_est*no_est + b_int*cen_ntm*TY),
+             ifelse(study_period == "m20", 
+            inv_logit_scaled(In + m20 + b_ntm*cen_ntm + b_rs*rs2 + b_TY*TY + b_kin*no_kin + b_est*no_est + b_int*cen_ntm*TY),
+             ifelse(study_period == "m21", 
+            inv_logit_scaled(In + m21 + b_ntm*cen_ntm + b_rs*rs2 + b_TY*TY + b_kin*no_kin + b_est*no_est + b_int*cen_ntm*TY),NA)))) %>% 
+  mutate(p = as.numeric(p)) -> posterior_female_prox 
+
+posterior_female_prox %>% 
+  pivot_wider(names_from = TY, values_from = p) %>% 
+  mutate(diff = `0` - `1`) %>% 
+  group_by(cen_ntm, study_period) %>% 
+  summarise(Difference = mean(diff),
+            CI_low = quantile(diff, 0.025),
+            CI_high = quantile(diff, 0.975)) -> cont_female_prox_prob
+  
+ ## 作図  
+cont_female_prox_prob %>% 
+  mutate(no_ntm = cen_ntm + mean(focal_rest$no_ntm, na.rm = TRUE)) %>% 
+  ggplot(aes(x = no_ntm, y = -Difference))+
+  geom_line() +
+  geom_ribbon(aes(ymin = -CI_low,
+                  ymax = -CI_high),
+              alpha = 0.2)+
+  geom_hline(yintercept = 0,
+             color = "black",
+             linetype = "dashed") +
+  theme_bw(base_size = 14)+
+  theme(aspect.ratio = 1,
+        plot.title = element_text(size = 13))+
+  scale_x_continuous(breaks = seq(0,13,1))+
+  labs(title = "",
+       y = "P",
+       x = "群れ外オス数")+
+  scale_x_continuous(breaks = seq(0,13,2))+
+  scale_fill_nejm()+
+  scale_color_nejm()+
+  facet_rep_wrap(~study_period,
+                 repeat.tick.labels = TRUE,
+                 ncol = 2,
+                 labeller = as_labeller(c("m19" = "2019年", "m20" = "2020年","m21" = "2021年")))+
+  theme(axis.title.y = element_text(angle = 0,
+                                    vjust = 0.5,
+                                    family = "Times New Roman"),
+        axis.title.x = element_text(family = "Yu Mincho"),
+        axis.text.x = element_text(family = "Yu Mincho"),
+        axis.text.y = element_text(family = "Times New Roman",
+                                   size = 12),
+        strip.text = element_text(family = "Yu Mincho",
+                                  hjust = 0),
+        strip.background = element_blank(),
+        aspect.ratio = 1) -> p_cont_female_prox_prob
+
+# ggsave("figure/p_cont_female_prox_prob.png", p_cont_female_prox_prob, dpi = 600, width =200, height =200, units = "mm")
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap="群れ外オス数ごとのTYの在/不在によるメスが休息集団にいる確率の違い"}
+knitr::include_graphics("figure/p_cont_female_prox_prob.png")
+```
+
+##### 結果の作図  
+```{r}
+posterior_female_prox %>% 
+  group_by(TY, cen_ntm, study_period) %>% 
+  summarise(Mean = mean(p),
+            CI_low = quantile(p, 0.025),
+            CI_high = quantile(p, 0.975)) %>% 
+  ungroup() %>% 
+  mutate(no_ntm = cen_ntm + mean(focal_rest$no_ntm, na.rm = TRUE)) %>% 
+  mutate(study_period = str_c("20",str_sub(study_period,2,3),"年"))-> fit_female_prox
+
+focal_rest %>% 
+  filter(TY != "2") %>% 
+  mutate(study_period = str_c("20",str_sub(study_period,2,3),"年")) %>% 
+  ggplot(aes(x = no_ntm, y = x3m_female/no_female2))+
+  geom_count()+
+  geom_line(data = fit_female_prox,
+            aes(y = Mean, color = study_period))+
+  geom_ribbon(data = fit_female_prox,
+              aes(y = Mean, fill = study_period,
+                  ymin = CI_low, ymax = CI_high),
+              alpha = 0.2)+
+  theme_bw(base_size = 15)+
+  facet_rep_wrap(~TY, repeat.tick.labels = TRUE,
+                 labeller = as_labeller(c("0" = "TYが群れにいない",
+                                          "1" = "TYが群れにいる")))+
+  scale_color_nejm()+
+  scale_fill_nejm()+
+  labs(y = "休\n息\n集\n団\nに\nい\nた\nメ\nス\nの\n割\n合",
+       x = "群れ外オス数", color = "調査期間", fill = "調査期間")+
+  scale_x_continuous(breaks = seq(0,14,2))+
+  theme(aspect.ratio = 1,
+        strip.background = element_blank(),
+        axis.text.x =  element_text(family = "Yu Mincho"),
+        axis.title.y = element_text(family = "Yu Mincho",
+                                    angle = 0,
+                                    vjust = 0.5),
+        axis.title.x = element_text(family = "Yu Mincho"),
+        legend.text = element_text(family = "Yu Mincho"),
+        legend.title = element_text(family = "Yu Mincho"),
+        axis.text.y = element_text(family = "Times New Roman"),
+        strip.text = element_text(hjust = 0,
+                                  family = "Yu Mincho")) -> p_female_prox_TY
+
+# ggsave("figure/p_female_prox_TY.png", p_female_prox_TY, dpi = 600, width =240, height =100, units = "mm")
+```
+
+```{r, echo=FALSE, out.width="100%", fig.cap="群れ外オス数とTYの在/不在によるメスが休息集団にいるメスの割合"}
+knitr::include_graphics("figure/p_female_prox_TY.png")
+```
+
+
+### 群れ外オス数やオスの有無による3m以内の非発情メス数の変動  
+発情メス以外のメスが休息集団にいる割合について同様にモデリングを行う。  
+
+#### モデリング      
+*IT*の有無は入れるのが難しいので、含めないでモデリングする。  
+
+- 分布: ベータ二項分布  
+- 応答変数: その日確認したメスの内、休息集団にいた個体の割合  
+- 説明変数: 群れ外オス数、TYの有無、これらの交互作用、発情メス数、群れ内の血縁個体数、調査期間、発情の有無    
+- ランダム切片: 追跡個体名、フォーカルセッション名  
+
+```{r}
+focal_rest %>% 
+  filter(study_period != "m18") %>% 
+  mutate(no_anest = ifelse(rs2 == "1", no_female - no_est +1,
+                           no_female - no_est)) %>% 
+  mutate(RGanest = RGfemale - RGest) -> focal_rest_anest 
+
+m_anest_prox <- brm(data = focal_rest_anest,
+                    RGanest|trials(no_anest) ~ cen_ntm*TY + no_est + no_kin + study_period + rs2 + 
+                      (1|subject) + (1|no_focal),
+                    family = "beta_binomial",
+                     prior = c(prior(student_t(4,0,10), class = "b"),
+                           prior(student_t(4,0,10), class = "Intercept"),
+                           prior(student_t(4,0,10), class = "sd")),
+                    control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                    iter = 5000, warmup = 2500, seed = 13,
+                    backend = "cmdstanr",
+                    file = "model/m_anest_prox.rds")
+```
+
+##### モデルチェック  
+
+過分散や外れ値の問題はないよう。少し分布への当てはまりは悪い？    
+```{r, include = FALSE}
+check_anest_prox <- dh_check_brms(m_anest_prox)
+```
+
+```{r, fig.dim = c(4.5,4.5)}
+plotQQunif(check_anest_prox)
+```
+
+多重共線性の問題はない。  
+```{r}
+check_collinearity(m_anest_prox)
+```
+
+##### 結果の確認  
+血縁個体数と発情の有無のみが有意だった。  
+```{r}
+model_parameters(m_anest_prox)
+```
+<br/> 
+
+交互作用項のある結果は以下の通り。いずれも有意ではない。  
+```{r}
+estimate_slopes(m_anest_prox,
+                trend = "cen_ntm",
+                at = c("TY = c(0,1)"),
+                ci = 0.9)
+```
+<br/> 
+
+### 群れ外オス数とTYが休息集団内にいる割合の関連  
+群れ外オス数によって、TYが休息集団内に含まれる割合が変化するかを調べる。モデルの詳細は以下の通り。TYとの近接は彼との親密度に影響されると考えたため、彼とのCSIもモデルに入れた。      
+
+- 分布: ベルヌーイ分布    
+- 応答変数: TYが休息集団内にいたか否か    
+- 説明変数: 群れ外オス数、TYとのCSI、これらの交互作用、発情メス数、群れ内のメス数、調査期間、発情の有無    
+- ランダム切片: 追跡個体名、フォーカルセッション名  
+
+#### モデリング  
+```{r}
+focal_rest %>% 
+  filter(TY == "1") %>% 
+  mutate(cen_ntm = no_ntm - mean(no_ntm, na.rm = TRUE)) -> focal_rest_TY
+
+m_RG_TY <- brm(data = focal_rest_TY,
+               RG_TY ~ cen_ntm*CSI + rs2 + study_period + no_female + no_est + (1|subject) + (1|no_focal),
+               family = "bernoulli",
+               prior = c(prior(student_t(4,0,10), class = "b"),
+                         prior(student_t(4,0,10), class = "Intercept"),
+                         prior(student_t(4,0,10), class = "sd")),
+               control=list(adapt_delta = 0.9999, max_treedepth = 20),
+               iter = 5000, warmup = 2500, seed = 13,
+               backend = "cmdstanr",
+               file = "model/m_RG_TY.rds")
+```
+
+##### モデルチェック  
+
+過分散や外れ値の問題はないよう。分布にも問題なく当てはまっている。  
+```{r, include = FALSE}
+check_RG_TY <- dh_check_brms(m_RG_TY)
+```
+
+```{r, fig.dim = c(4.5,4.5)}
+plotQQunif(check_RG_TY)
+```
+
+多重共線性の問題はない。  
+```{r}
+check_collinearity(m_RG_TY)
+```
+
+##### 結果の確認  
+有意な変数はなかった。  
+```{r}
+model_parameters(m_RG_TY)
+```
+
+交互作用の検討を行う。CSIの値が大きくても有意ではなかった。  
+```{r}
+estimate_slopes(m_RG_TY,
+                trend = "cen_ntm",
+                at = "CSI = c(0,1,2,3,4)")
+```
+
+
+### 群れ外オス数によるTYとの近接割合    
+同様のモデルを3m近接についても回す。  
+
+#### モデリング  
+
+- 分布: ベルヌーイ分布  
+- 応答変数: 3m以内にTYがいたか否か  
+- 説明変数: 群れ外オス数、TYとのCSI、これらの交互作用、発情メス数、群れ内のメス数、調査期間、発情の有無    
+- ランダム切片: 追跡個体名、フォーカルセッション名  
+
+```{r}
+m_RG_TYprox <- brm(data = focal_rest_TY,
+                   TY_3m ~ cen_ntm*CSI + no_est + rs2  + study_period + (1|subject) + (1|no_focal),
+                   family = "bernoulli",
+                   prior = c(prior(student_t(4,0,10), class = "b"),
+                             prior(student_t(4,0,10), class = "Intercept"),
+                             prior(student_t(4,0,10), class = "sd")),
+                   control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                   iter = 5000, warmup = 2500, seed = 13,
+                   backend = "cmdstanr",
+                   file = "model/m_RG_TYprox.rds")
+```
+
+##### モデルチェック  
+
+過分散や外れ値の問題はないよう。分布にも問題なく当てはまっている。  
+```{r, include = FALSE}
+check_RG_TYprox <- dh_check_brms(m_RG_TYprox)
+```
+
+```{r, fig.dim = c(4.5,4.5)}
+plotQQunif(check_RG_TYprox)
+```
+
+多重共線性の問題はない。  
+```{r}
+check_collinearity(m_RG_TYprox)
+```
+
+##### 結果の確認  
+有意な変数はなかった。  
+```{r}
+model_parameters(m_RG_TYprox)
+```
+<br/> 
