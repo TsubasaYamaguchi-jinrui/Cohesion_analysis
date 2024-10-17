@@ -1,0 +1,68 @@
+# 凝集性がオスからの攻撃を防ぐメカニズム  
+
+## 凝集性が高いほど援助を受けやすいか?  
+まず、地上休息または地上休息のデータを用いて凝集性が高いほど援助を受けやすいか確認する(地上休息のみだと援助された例数が少ない)。    
+
+### データの算出  
+そもそも追跡個体が攻撃を受けたうち、援助を受けたのは非発情メスで9回/80回、発情メスで5回/150回だった。  
+```{r}
+focal_raw_prox_fin %>% 
+  filter(agg_focal == "1") %>% 
+  replace_na(list(support_focal = 0)) %>% 
+  group_by(rs2) %>% 
+  summarise(N = n(),
+            support = sum(support_focal))
+```
+
+援助を受けたときの直前の活動は以下の通り。  
+```{r}
+focal_raw_prox_fin %>% 
+  filter(agg_focal == "1") %>% 
+  replace_na(list(support_focal = 0)) %>% 
+  group_by(activity) %>% 
+  summarise(N = n(),
+            support = sum(support_focal))
+```
+
+援助した個体と回数は以下の通り。
+```{r}
+focal_raw_prox_fin %>% 
+  filter(agg_focal == "1") %>% 
+  filter(support_focal == "1") %>% 
+  group_by(subject, supporter) %>% 
+  summarise(N = n()) %>% 
+  drop_na(supporter)
+```
+
+地上採食または地上休息/毛づくろい中に援助を受ける確率は周辺個体数とは明確に関連がない?。
+なお、低順位または群れ外オスとコンソート中のメスは省いた。  
+```{r}
+focal_raw_prox_fin %>% 
+  filter(activity %in% c("R","F","G") & T_G == "G") %>% 
+  filter(agg_focal == "1") %>% 
+  filter(consort <= 2) %>% 
+  group_by(x3m_female) %>% 
+  summarise(N = n(),
+            support = sum(support, na.rm = TRUE)) %>% 
+  mutate(rate = support/N) %>% 
+  ggplot(aes(x = x3m_female, y = rate))+
+  geom_col()+
+  geom_text(aes(x = x3m_female, y = rate + 0.01,
+                label = str_c(support,"/",N)))+
+  labs(x = "3m以内のメス数", y = "援\n助\nが\nあ\nっ\nた\n割\n合")+
+  theme_bw(base_size = 15)+
+  theme(axis.title.y = element_text(angle =0,
+                                    vjust = 0.5,
+                                    family = "Yu Mincho"),
+        axis.title.x = element_text(family = "Yu Mincho"),
+        axis.text = element_text(family = "Times New Roman"),
+        aspect.ratio = 1) -> p_support
+
+p_support
+
+# ggsave("figure/p_supprt.png", p_support, width = 100, height = 100, units = "mm")
+```
+
+
+
+

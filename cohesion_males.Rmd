@@ -1,0 +1,1093 @@
+# 休息集団中や近接個体に各オスがいる割合  
+## 非交尾期との比較  
+### データの加工  
+まず、非交尾期のデータを読み込む。今回は2019年のみ。    
+```{r}
+female19_nm %>% 
+  group_by(date) %>% 
+  summarise(no_female = sum(presence)) %>% 
+  ungroup() -> no_female_nm
+
+focal_raw_nm19 <- read_excel("C:/Users/Tsubasa Yamaguchi/Desktop/Study/data/2019nonmating/2019nonmating_raw.xlsx",
+                      sheet = "focal_raw",
+                      col_types = c(rep("numeric",2),rep("date",1),rep("text",1),rep("numeric",2), rep("text",2),
+                                    rep("numeric",2),rep("text",21),"numeric","text", rep("numeric",3))) %>% 
+                            
+  mutate(study_period = "nm19") %>% 
+  mutate(RG = ifelse(activity %in% c("R","G") & TG == "G",1,0)) %>% 
+  left_join(no_female_nm)
+
+focal_raw_nm19 %>% 
+  pivot_longer(cols = x0_1m:x5_10m, names_to = "proximity",values_to = "ID") %>% 
+  mutate(proximity = ifelse(str_detect(proximity,"x0_1m"),"x0_1m",
+                            ifelse(str_detect(proximity,"x1_3m"),"x1_3m",
+                                   ifelse(str_detect(proximity,"x3_5m"),"x3_5m",
+                                          ifelse(str_detect(proximity,"x5_10m"),"x5_10m","NA"))))) %>% 
+  filter(!is.na(ID)) -> focal_raw_prox_nm19
+```
+
+休息中に近接にオスがいる時間割合を算出する。算出するのは休息集団に*TY*がいる割合と3m以内に*TY*がいる割合である。  
+
+**休息集団内**  
+```{r}
+## TY
+focal_raw_prox_nm19  %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "TY") %>% 
+  mutate(RG_TY = 1) %>% 
+  select(-ID) -> RG_TYnm
+
+## IT
+focal_raw_prox_nm19 %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "IT") %>% 
+  mutate(RG_IT = 1)%>% 
+  select(-ID) -> RG_ITnm
+
+## LK
+focal_raw_prox_nm19  %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "LK") %>% 
+  mutate(RG_LK = 1)%>% 
+  select(-ID) -> RG_LKnm
+
+## LR
+focal_raw_prox_nm19  %>% 
+  filter(RG == "1") %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(ID == "KR") %>% 
+  mutate(RG_KR = 1)%>% 
+  select(-ID) -> RG_KRnm
+```
+
+休息集団内のメス数も算出する。  
+```{r}
+RG_femalenm <- focal_raw_prox_nm19 %>% 
+  filter(RG == "1") %>% 
+  filter(ID %in% adult18) %>% 
+  group_by(date, no_focal, time) %>% 
+  summarise(RGfemale = n()) %>% 
+  ungroup()
+```
+
+**3m近接**  
+```{r}
+focal_raw_prox_nm19 %>% 
+  filter(proximity %in% c("x0_1m", "x1_3m")) %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(str_detect(ID, "TY")) %>% 
+  mutate(TY_3m = 1)%>% 
+  select(-ID) -> TY_3m_nm
+
+focal_raw_prox_nm19 %>% 
+  filter(proximity %in% c("x0_1m", "x1_3m")) %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(str_detect(ID, "IT")) %>% 
+  mutate(IT_3m = 1)%>% 
+  select(-ID) -> IT_3m_nm
+
+focal_raw_prox_nm19 %>% 
+  filter(proximity %in% c("x0_1m", "x1_3m")) %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(str_detect(ID, "LK")) %>% 
+  mutate(LK_3m = 1)%>% 
+  select(-ID) -> LK_3m_nm
+
+focal_raw_prox_nm19 %>% 
+  filter(proximity %in% c("x0_1m", "x1_3m")) %>% 
+  select(date, no_focal, time, ID) %>% 
+  filter(str_detect(ID, "KR")) %>% 
+  mutate(KR_3m = 1)%>% 
+  select(-ID) -> KR_3m_nm
+``` 
+
+全て結合する。  
+```{r}
+focal_raw_nm19 %>% 
+  left_join(RG_TYnm, by = c("date","no_focal","time")) %>% 
+  left_join(RG_ITnm, by = c("date","no_focal","time")) %>%
+  left_join(RG_LKnm, by = c("date","no_focal","time")) %>%
+  left_join(RG_KRnm, by = c("date","no_focal","time")) %>%
+  left_join(TY_3m_nm, by = c("date","no_focal","time")) %>% 
+  left_join(IT_3m_nm, by = c("date","no_focal","time")) %>%
+  left_join(LK_3m_nm, by = c("date","no_focal","time")) %>%
+  left_join(KR_3m_nm, by = c("date","no_focal","time")) %>%
+  left_join(RG_femalenm, by = c("date","no_focal","time")) %>% 
+  replace_na(list(RGfemale = 0, RG_TY = 0, RG_IT = 0, RG_LK = 0, RG_KR = 0,
+                  TY_3m = 0, IT_3m = 0, LK_3m = 0, KR_3m = 0)) %>% 
+  mutate(no_focal = str_c(study_period, "_", no_focal)) -> focal_raw_nm19_fin
+```
+
+データは以下の通り。  
+```{r}
+datatable(focal_raw_nm19_fin,
+          options = list(scrollX = 80),
+          filter = list(position = "top"))
+```
+
+### 分析  
+#### 休息集団内にオスがいた割合の比較  
+##### 割合の算出  
+まず、非交尾期と交尾期のそれぞれについて休息集団内に各オスがいた割合を算出する。なお、少なくとも地上休息/毛づくろいが3ポイント以上続いた場合のみを抽出する。サル団子場面は外す。  
+
+すくなとも15ポイント以上あるデータのみを使用。  
+```{r}
+focal_raw_nm19_fin %>% 
+  filter(RG == "1") %>% 
+  filter(RGsuc3 == "1") %>% 
+  filter(hud != "1") %>% 
+  group_by(no_focal, subject, study_period, date) %>% 
+  summarise(N = n(),
+            rate_TY = mean(RG_TY),
+            sum_TY = sum(RG_TY),
+            rate_IT = mean(RG_IT),
+            sum_IT= sum(RG_IT),
+            rate_LK = mean(RG_LK),
+            sum_LK = sum(RG_LK),
+            rate_KR = mean(RG_KR),
+            sum_KR = sum(RG_KR)) %>% 
+  ungroup() %>% 
+  filter(N >= 15) -> focal_RG_sum_nm
+```
+
+交尾期でも同様に算出。交尾期は非発情メスを追跡した日のみを使用する。    
+```{r}
+focal_raw_prox_fin %>% 
+  filter(RG == "1") %>% 
+  filter(RGsuc3 == "1") %>% 
+  filter(rs2 == "0") %>%
+  group_by(no_focal, subject, study_period, TY, IT, date) %>% 
+  summarise(N = n(),
+            rate_TY = mean(RG_TY),
+            sum_TY = sum(RG_TY),
+            rate_IT = mean(RG_IT),
+            sum_IT= sum(RG_IT),
+            rate_LK = mean(RG_LK),
+            sum_LK = sum(RG_LK),
+            rate_KR = mean(RG_KR),
+            sum_KR = sum(RG_KR)) %>% 
+  ungroup() %>% 
+  filter(N >= 15) -> focal_RG_sum
+```
+
+データを結合する。  
+```{r}
+bind_rows(focal_RG_sum, focal_RG_sum_nm) %>% 
+  replace_na(list(TY = 1, IT = 1)) %>% 
+  mutate(date = as.factor(date)) %>% 
+  mutate(season = ifelse(str_detect(study_period,"nm"),"nm","m"))-> focal_RG_sum_all
+```
+
+##### データの確認  
+```{r}
+focal_RG_sum_all %>%
+  filter(TY == "1") %>% 
+  filter(N >= 10) %>% 
+  ggplot(aes(x = study_period, y = rate_TY))+
+  geom_violin(scale = "width",
+              bw = 0.02)
+```
+
+##### 分析  
+###### TY  
+まずはTYから分析する。  
+
+**モデリング**  
+調査期間を説明変数、追跡個体名と日にちをランダム切片に入れる。  
+```{r}
+focal_RG_sum_TY <- focal_RG_sum_all %>% 
+                    filter(TY == "1") 
+
+## 調査期間ごと
+m_RG_TYcomp <- brm(data = focal_RG_sum_TY,
+                   sum_TY|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_TYcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_TYcomp <- dh_check_brms(m_RG_TYcomp)
+```
+
+```{r}
+plot(check_RG_TYcomp)
+```
+
+```{r}
+testZeroInflation(check_RG_TYcomp)
+```
+
+**結果の確認**  
+非交尾期は2018交尾期と2019交尾期、2021年交尾期に比べると、休息集団にTYがいる割合が有意に少ない。　　  
+```{r}
+estimate_contrasts(m_RG_TYcomp,
+                   contrast = "study_period")
+```
+
+###### IT  
+**モデリング**  
+```{r}
+focal_RG_sum_IT <- focal_RG_sum_all %>% 
+                    filter(IT == "1") %>% 
+                    filter(study_period != "m21")
+
+## 調査期間ごと
+m_RG_ITcomp <- brm(data = focal_RG_sum_IT,
+                   sum_IT|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_ITcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。
+```{r, include = FALSE}
+check_RG_ITcomp <- dh_check_brms(m_RG_ITcomp)
+```
+
+```{r}
+plot(check_RG_ITcomp)
+```
+
+```{r}
+testZeroInflation(check_RG_ITcomp)
+```
+
+**結果の確認**  
+いずれの違いも有意ではないよう。  
+```{r}
+estimate_contrasts(m_RG_ITcomp,
+                   contrast = "study_period")
+```
+
+###### LK  
+**モデリング**  
+説明変数を調査期間にしたものと、
+```{r}
+focal_RG_sum_LK <- focal_RG_sum_all %>% 
+                    filter(study_period != "m21" & study_period != "m20")
+
+## 調査期間ごと
+m_RG_LKcomp <- brm(data = focal_RG_sum_LK,
+                   sum_LK|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_LKcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_LKcomp <- dh_check_brms(m_RG_LKcomp)
+```
+
+```{r}
+plot(check_RG_LKcomp)
+```
+
+```{r}
+testZeroInflation(check_RG_LKcomp)
+```
+
+**結果の確認**  
+交尾期は非交尾期よりもLKが休息集団に含まれる割合が高い。   
+```{r}
+estimate_contrasts(m_RG_LKcomp,
+                   contrast = "study_period")
+```
+
+###### KR  
+**モデリング**  
+説明変数を調査期間にしたものと、
+```{r}
+## 調査期間ごと
+m_RG_KRcomp <- brm(data = focal_RG_sum_all,
+                   sum_KR|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_KRcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_KRcomp <- dh_check_brms(m_RG_KRcomp)
+```
+
+```{r}
+plot(check_RG_KRcomp)
+```
+
+```{r}
+testZeroInflation(check_RG_KRcomp)
+```
+
+**結果の確認**  
+2020年、2021年の交尾期は非交尾期よりKRが休息集団にいる割合が多いよう。    
+```{r}
+estimate_contrasts(m_RG_KRcomp,
+                   contrast = "study_period")
+```
+
+###### 交尾期内でのオス間の比較  
+**データの加工**  
+縦長のデータにする。  
+```{r}
+focal_RG_sum_all %>% 
+  select(-rate_TY, -rate_IT, -rate_LK, -rate_KR) %>% 
+  pivot_longer(cols = c(sum_TY, sum_IT, sum_LK, sum_KR),
+               names_to = "maleID", values_to = "sum") -> focal_RG_sum_long
+```
+
+**モデリング**  
+調査年ごとに分けてモデリングを行う。  
+
+**2018年**  
+```{r}
+focal_RG_sum_long %>% 
+  filter(study_period == "m18") -> focal_RG_sum_long18
+
+m_RG_malecomp18 <- brm(data = focal_RG_sum_long18,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_malecomp18")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_malecomp18 <- dh_check_brms(m_RG_malecomp18)
+```
+
+```{r}
+plot(check_RG_malecomp18)
+```
+
+```{r}
+testZeroInflation(check_RG_malecomp18)
+```
+
+**結果の確認**  
+休息集団にいる割合は*TY* > *IT*・*LK* > *KR*  
+```{r}
+estimate_contrasts(m_RG_malecomp18,
+                   contrast = "maleID")
+```
+
+**2019年**  
+*TY*がいる日の*TY*、*LK*、*KR*の比較と、*IT*がいる日の*IT*、*LK*、*KR*の比較、どちらもいる日の全個体の比較を行う。  
+
+**TYがいる日**  
+```{r}
+focal_RG_sum_long %>% 
+  filter(study_period == "m19") %>% 
+  filter(TY == "1") %>% 
+filter(maleID != "sum_IT") -> focal_RG_sum_long19_TY
+
+m_RG_malecomp19_TY <- brm(data = focal_RG_sum_long19_TY,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_malecomp19_TY")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_malecomp19_TY <- dh_check_brms(m_RG_malecomp19_TY)
+```
+
+```{r}
+plot(check_RG_malecomp19_TY)
+```
+
+```{r}
+testZeroInflation(check_RG_malecomp19_TY)
+```
+
+**結果の確認**  
+*TY* > *LK*・*KR*  
+```{r}
+estimate_contrasts(m_RG_malecomp19_TY,
+                   contrast = "maleID")
+```
+
+**ITがいる日**  
+```{r}
+focal_RG_sum_long %>% 
+  filter(study_period == "m19") %>% 
+  filter(IT == "1") %>% 
+  filter(maleID != "sum_TY") -> focal_RG_sum_long19_IT
+
+m_RG_malecomp19_IT <- brm(data = focal_RG_sum_long19_IT,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_malecomp19_IT")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_malecomp19_IT <- dh_check_brms(m_RG_malecomp19_IT)
+```
+
+```{r}
+plot(check_RG_malecomp19_IT)
+```
+
+```{r}
+testZeroInflation(check_RG_malecomp19_IT)
+```
+
+**結果の確認**  
+*IT*と*KR*の間のみ有意な差。      
+```{r}
+estimate_contrasts(m_RG_malecomp19_IT,
+                   contrast = "maleID")
+```
+
+**どちらもいる日**  
+```{r}
+focal_RG_sum_long %>% 
+  filter(study_period == "m19") %>% 
+  filter(IT == "1" & TY == "1")  -> focal_RG_sum_long19_TYIT
+
+m_RG_malecomp19_TYIT <- brm(data = focal_RG_sum_long19_TYIT,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_malecomp19_TYIT")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_malecomp19_TYIT <- dh_check_brms(m_RG_malecomp19_TYIT)
+```
+
+```{r}
+plot(check_RG_malecomp19_TYIT)
+```
+
+```{r}
+testZeroInflation(check_RG_malecomp19_TYIT)
+```
+
+**結果の確認**  
+*LK*と*KR*の差以外は有意。*TY* > *IT* > *LK*・*KR*。     
+```{r}
+estimate_contrasts(m_RG_malecomp19_TYIT,
+                   contrast = "maleID")
+```
+
+**2020年**  
+*TY*がいる日の*TY*、*KR*の比較と、*IT*がいる日の*IT*、*KR*の比較を行う。どちらもいる日は6サンプルしかないため比較は行わない。    
+
+**TYがいる日**  
+```{r}
+focal_RG_sum_long %>% 
+  filter(study_period == "m20") %>% 
+  filter(TY == "1") %>% 
+  filter(maleID != "sum_IT") %>% 
+  filter(maleID != "sum_LK") -> focal_RG_sum_long20_TY
+
+m_RG_malecomp20_TY <- brm(data = focal_RG_sum_long20_TY,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_malecomp20_TY")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_malecomp20_TY <- dh_check_brms(m_RG_malecomp20_TY)
+```
+
+```{r}
+plot(check_RG_malecomp20_TY)
+```
+
+```{r}
+testZeroInflation(check_RG_malecomp20_TY)
+```
+
+**結果の確認**  
+TY > KR。  
+```{r}
+estimate_contrasts(m_RG_malecomp20_TY,
+                   contrast = "maleID")
+```
+
+**ITがいる日**  
+```{r}
+focal_RG_sum_long %>% 
+  filter(study_period == "m20") %>% 
+  filter(IT == "1") %>% 
+  filter(maleID != "sum_TY")%>% 
+  filter(maleID != "sum_LK")  -> focal_RG_sum_long20_IT
+
+m_RG_malecomp20_IT <- brm(data = focal_RG_sum_long20_IT,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_malecomp20_IT")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_RG_malecomp20_IT <- dh_check_brms(m_RG_malecomp20_IT)
+```
+
+```{r}
+plot(check_RG_malecomp20_IT)
+```
+
+```{r}
+testZeroInflation(check_RG_malecomp20_IT)
+```
+
+**結果の確認**  
+有意な差はなし。        
+```{r}
+estimate_contrasts(m_RG_malecomp20_IT,
+                   contrast = "maleID")
+```
+
+**2021年**  
+*TY*がいる日の*TY*、*KR*の比較を行う。  
+
+```{r}
+focal_RG_sum_long %>% 
+  filter(study_period == "m21") %>% 
+  filter(TY == "1") %>% 
+  filter(maleID != "sum_IT" & maleID != "sum_LK") -> focal_RG_sum_long21_TY
+
+m_RG_malecomp21_TY <- brm(data = focal_RG_sum_long21_TY,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_RG_malecomp21_TY")
+```
+
+**モデルチェック**  
+少し当てはまりが悪いよう。    
+```{r, include = FALSE}
+check_RG_malecomp21_TY <- dh_check_brms(m_RG_malecomp21_TY)
+```
+
+```{r}
+plot(check_RG_malecomp21_TY)
+```
+
+```{r}
+testZeroInflation(check_RG_malecomp21_TY)
+```
+
+**結果の確認**  
+TY > KR。          
+```{r}
+estimate_contrasts(m_RG_malecomp21_TY,
+                   contrast = "maleID")
+```
+
+
+#### 3m以内にオスがいた割合の比較 
+##### 割合の算出  
+まず、非交尾期と交尾期のそれぞれについて休息集団内に各オスがいた割合を算出する。なお、少なくとも地上休息/毛づくろいが3ポイント以上続いた場合のみを抽出する。    
+```{r}
+focal_raw_nm19_fin %>% 
+  filter(RG == "1") %>% 
+  filter(RGsuc3 == "1") %>% 
+  filter(hud != "1") %>% 
+  group_by(no_focal, subject, study_period, date) %>% 
+  summarise(N = n(),
+            rate_TY = mean(TY_3m),
+            sum_TY = sum(TY_3m),
+            rate_IT = mean(IT_3m),
+            sum_IT= sum(IT_3m),
+            rate_LK = mean(LK_3m),
+            sum_LK = sum(LK_3m),
+            rate_KR = mean(KR_3m),
+            sum_KR = sum(KR_3m)) %>% 
+  ungroup()%>% 
+  filter(N >= 15) -> focal_3m_sum_nm
+```
+
+交尾期でも同様に算出。交尾期は非発情メスを追跡した日のみを使用する。    
+```{r}
+focal_raw_prox_fin %>% 
+  filter(RG == "1") %>% 
+  filter(RGsuc3 == "1") %>% 
+  filter(rs2 == "0") %>% 
+  group_by(no_focal, subject, study_period, TY, IT, date) %>% 
+  summarise(N = n(),
+            rate_TY = mean(TY_3m),
+            sum_TY = sum(TY_3m),
+            rate_IT = mean(IT_3m),
+            sum_IT= sum(IT_3m),
+            rate_LK = mean(LK_3m),
+            sum_LK = sum(LK_3m),
+            rate_KR = mean(KR_3m),
+            sum_KR = sum(KR_3m)) %>% 
+  ungroup()%>% 
+  filter(N >= 15) -> focal_3m_sum
+```
+
+データを結合する。  
+```{r}
+bind_rows(focal_3m_sum, focal_3m_sum_nm) %>% 
+  replace_na(list(TY = 1, IT = 1)) %>% 
+  mutate(date = as.factor(date)) %>% 
+  mutate(season = ifelse(str_detect(study_period,"nm"),"nm","m"))-> focal_3m_sum_all
+```
+
+##### データの確認  
+```{r}
+focal_3m_sum_all %>%
+  filter(TY == "1") %>% 
+  filter(N >= 10) %>% 
+  ggplot(aes(x = study_period, y = rate_TY))+
+  geom_violin(scale = "width",
+              bw = 0.02)
+```
+
+##### 分析  
+###### TY  
+まずはTYから分析する。  
+
+**モデリング**  
+調査期間を説明変数、追跡個体名と日にちをランダム切片に入れる。  
+```{r}
+focal_3m_sum_TY <- focal_3m_sum_all %>% 
+                    filter(TY == "1") 
+
+## 調査期間ごと
+m_3m_TYcomp <- brm(data = focal_3m_sum_TY,
+                   sum_TY|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_TYcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_TYcomp <- dh_check_brms(m_3m_TYcomp)
+```
+
+```{r}
+plot(check_3m_TYcomp)
+```
+
+```{r}
+testZeroInflation(check_3m_TYcomp)
+```
+
+**結果の確認**  
+非交尾期は2018交尾期と2019交尾期、2021年交尾期に比べると、3m以内にTYがいる割合が有意に少ない。　 
+```{r}
+estimate_contrasts(m_3m_TYcomp,
+                   contrast = "study_period")
+```
+
+###### IT  
+**モデリング**  
+```{r}
+focal_3m_sum_IT <- focal_3m_sum_all %>% 
+                    filter(IT == "1") %>% 
+                    filter(study_period != "m21")
+
+## 調査期間ごと
+m_3m_ITcomp <- brm(data = focal_3m_sum_IT,
+                   sum_IT|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_ITcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。
+```{r, include = FALSE}
+check_3m_ITcomp <- dh_check_brms(m_3m_ITcomp)
+```
+
+```{r}
+plot(check_3m_ITcomp)
+```
+
+```{r}
+testZeroInflation(check_3m_ITcomp)
+```
+
+**結果の確認**  
+いずれの違いも有意ではないよう。  
+```{r}
+estimate_contrasts(m_3m_ITcomp,
+                   contrast = "study_period")
+```
+
+###### LK  
+**モデリング**  
+説明変数を調査期間にしたものと、
+```{r}
+focal_3m_sum_LK <- focal_3m_sum_all %>% 
+                    filter(study_period != "m21" & study_period != "m20")
+
+## 調査期間ごと
+m_3m_LKcomp <- brm(data = focal_3m_sum_LK,
+                   sum_LK|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_LKcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_LKcomp <- dh_check_brms(m_3m_LKcomp)
+```
+
+```{r}
+plot(check_3m_LKcomp)
+```
+
+```{r}
+testZeroInflation(check_3m_LKcomp)
+```
+
+**結果の確認**  
+交尾期には非交尾期よりもLKが3m以内にいる割合が多いよう。    
+```{r}
+estimate_contrasts(m_3m_LKcomp,
+                   contrast = "study_period")
+```
+
+###### KR  
+**モデリング**  
+説明変数を調査期間にしたものと、
+```{r}
+## 調査期間ごと
+m_3m_KRcomp <- brm(data = focal_3m_sum_all,
+                   sum_KR|trials(N) ~ study_period + (1|subject) + (1|date),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_KRcomp")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_KRcomp <- dh_check_brms(m_3m_KRcomp)
+```
+
+```{r}
+plot(check_3m_KRcomp)
+```
+
+```{r}
+testZeroInflation(check_3m_KRcomp)
+```
+
+**結果の確認**  
+2020年、2021年の交尾期は非交尾期よりKRが3m以内にいる割合が多いよう。    
+```{r}
+estimate_contrasts(m_3m_KRcomp,
+                   contrast = "study_period")
+```
+
+###### 交尾期内でのオス間の比較  
+**データの加工**  
+縦長のデータにする。  
+```{r}
+focal_3m_sum_all %>% 
+  select(-rate_TY, -rate_IT, -rate_LK, -rate_KR) %>% 
+  pivot_longer(cols = c(sum_TY, sum_IT, sum_LK, sum_KR),
+               names_to = "maleID", values_to = "sum") -> focal_3m_sum_long
+```
+
+**モデリング**  
+調査年ごとに分けてモデリングを行う。  
+
+**2018年**  
+```{r}
+focal_3m_sum_long %>% 
+  filter(study_period == "m18") -> focal_3m_sum_long18
+
+m_3m_malecomp18 <- brm(data = focal_3m_sum_long18,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_malecomp18")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_malecomp18 <- dh_check_brms(m_3m_malecomp18)
+```
+
+```{r}
+plot(check_3m_malecomp18)
+```
+
+```{r}
+testZeroInflation(check_3m_malecomp18)
+```
+
+**結果の確認**  
+休息集団にいる割合は*TY* > *IT*・*LK* > *KR*  
+```{r}
+estimate_contrasts(m_3m_malecomp18,
+                   contrast = "maleID")
+```
+
+**2019年**  
+*TY*がいる日の*TY*、*LK*、*KR*の比較と、*IT*がいる日の*IT*、*LK*、*KR*の比較、どちらもいる日の全個体の比較を行う。  
+
+**TYがいる日**  
+```{r}
+focal_3m_sum_long %>% 
+  filter(study_period == "m19") %>% 
+  filter(TY == "1") %>% 
+filter(maleID != "sum_IT") -> focal_3m_sum_long19_TY
+
+m_3m_malecomp19_TY <- brm(data = focal_3m_sum_long19_TY,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_malecomp19_TY")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_malecomp19_TY <- dh_check_brms(m_3m_malecomp19_TY)
+```
+
+```{r}
+plot(check_3m_malecomp19_TY)
+```
+
+```{r}
+testZeroInflation(check_3m_malecomp19_TY)
+```
+
+**結果の確認**  
+*TY* > *LK*・*KR*  
+```{r}
+estimate_contrasts(m_3m_malecomp19_TY,
+                   contrast = "maleID")
+```
+
+**ITがいる日**  
+```{r}
+focal_3m_sum_long %>% 
+  filter(study_period == "m19") %>% 
+  filter(IT == "1") %>% 
+  filter(maleID != "sum_TY") -> focal_3m_sum_long19_IT
+
+m_3m_malecomp19_IT <- brm(data = focal_3m_sum_long19_IT,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_malecomp19_IT")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_malecomp19_IT <- dh_check_brms(m_3m_malecomp19_IT)
+```
+
+```{r}
+plot(check_3m_malecomp19_IT)
+```
+
+```{r}
+testZeroInflation(check_3m_malecomp19_IT)
+```
+
+**結果の確認**  
+有意な差はなし。       
+```{r}
+estimate_contrasts(m_3m_malecomp19_IT,
+                   contrast = "maleID")
+```
+
+**どちらもいる日**  
+```{r}
+focal_3m_sum_long %>% 
+  filter(study_period == "m19") %>% 
+  filter(IT == "1" & TY == "1")  -> focal_3m_sum_long19_TYIT
+
+m_3m_malecomp19_TYIT <- brm(data = focal_3m_sum_long19_TYIT,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_malecomp19_TYIT")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_malecomp19_TYIT <- dh_check_brms(m_3m_malecomp19_TYIT)
+```
+
+```{r}
+plot(check_3m_malecomp19_TYIT)
+```
+
+```{r}
+testZeroInflation(check_3m_malecomp19_TYIT)
+```
+
+**結果の確認**  
+*TY*と他の個体の差のみ有意。      
+```{r}
+estimate_contrasts(m_3m_malecomp19_TYIT,
+                   contrast = "maleID")
+```
+
+**2020年**  
+*TY*がいる日の*TY*、*KR*の比較と、*IT*がいる日の*IT*、*KR*の比較を行う。どちらもいる日は6サンプルしかないため比較は行わない。    
+
+**TYがいる日**  
+```{r}
+focal_3m_sum_long %>% 
+  filter(study_period == "m20") %>% 
+  filter(TY == "1") %>% 
+  filter(maleID != "sum_IT") %>% 
+  filter(maleID != "sum_LK") -> focal_3m_sum_long20_TY
+
+m_3m_malecomp20_TY <- brm(data = focal_3m_sum_long20_TY,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_malecomp20_TY")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_malecomp20_TY <- dh_check_brms(m_3m_malecomp20_TY)
+```
+
+```{r}
+plot(check_3m_malecomp20_TY)
+```
+
+```{r}
+testZeroInflation(check_3m_malecomp20_TY)
+```
+
+**結果の確認**  
+有意な差はなし。    
+```{r}
+estimate_contrasts(m_3m_malecomp20_TY,
+                   contrast = "maleID")
+```
+
+**ITがいる日**  
+```{r}
+focal_3m_sum_long %>% 
+  filter(study_period == "m20") %>% 
+  filter(IT == "1") %>% 
+  filter(maleID != "sum_TY")%>% 
+  filter(maleID != "sum_LK")  -> focal_3m_sum_long20_IT
+
+m_3m_malecomp20_IT <- brm(data = focal_3m_sum_long20_IT,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_malecomp20_IT")
+```
+
+**モデルチェック**  
+過分散やゼロ過剰などの問題はないよう。  
+```{r, include = FALSE}
+check_3m_malecomp20_IT <- dh_check_brms(m_3m_malecomp20_IT)
+```
+
+```{r}
+plot(check_3m_malecomp20_IT)
+```
+
+```{r}
+testZeroInflation(check_3m_malecomp20_IT)
+```
+
+**結果の確認**  
+有意な差はなし。        
+```{r}
+estimate_contrasts(m_3m_malecomp20_IT,
+                   contrast = "maleID")
+```
+
+**2021年**  
+*TY*がいる日の*TY*、*KR*の比較を行う。  
+
+```{r}
+focal_3m_sum_long %>% 
+  filter(study_period == "m21") %>% 
+  filter(TY == "1") %>% 
+  filter(maleID != "sum_IT" & maleID != "sum_LK") -> focal_3m_sum_long21_TY
+
+m_3m_malecomp21_TY <- brm(data = focal_3m_sum_long21_TY,
+                   sum|trials(N) ~ maleID + (1|subject) + (1|date) + (1|no_focal),
+                   family = "beta_binomial",
+                   control=list(adapt_delta = 0.9999, max_treedepth = 22),
+                   backend = "cmdstanr",
+                   file = "model/m_3m_malecomp21_TY")
+```
+
+**モデルチェック**  
+少し当てはまりが悪いよう。    
+```{r, include = FALSE}
+check_3m_malecomp21_TY <- dh_check_brms(m_3m_malecomp21_TY)
+```
+
+```{r}
+plot(check_3m_malecomp21_TY)
+```
+
+```{r}
+testZeroInflation(check_3m_malecomp21_TY)
+```
+
+**結果の確認**  
+TY > KR。          
+```{r}
+estimate_contrasts(m_3m_malecomp21_TY,
+                   contrast = "maleID")
+```

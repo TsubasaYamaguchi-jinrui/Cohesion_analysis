@@ -1,0 +1,5 @@
+# 使用する基礎データ  
+
+```{r child = "C:/Users/Tsubasa Yamaguchi/Desktop/Study/DoctorStudy/data_cleaning.Rmd", include = FALSE}
+
+```

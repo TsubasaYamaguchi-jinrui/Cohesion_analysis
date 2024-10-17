@@ -1,0 +1,9 @@
+.Rproj.user
+.Rhistory
+.RData
+*.tif
+.Ruserdata
+_bookdown_files
+model/m_female_ss*.rds  
+model/m_female_sp_ss.rds     
+Fission-fusion-dynamics-in-B1-troop_cache  
