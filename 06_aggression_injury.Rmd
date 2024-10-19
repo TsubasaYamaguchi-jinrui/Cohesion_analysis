@@ -38,13 +38,15 @@ agg_each <- aggression_all %>%
 
 ### 個体データに結合  
 ## 各集団で確認できたメスと集団を追跡した時間を算出
-group_all %>% 
+group_all_b <- group_all %>% 
   mutate(date = as_date(date),
          duration1 = as.numeric(difftime(fin, start, units = "mins")),
          duration2 = as.numeric(difftime(restart, suspend, units = "mins")))%>%
   mutate(duration1 = replace_na(duration1,0),
          duration2 = replace_na(duration2,0)) %>%
-  mutate(duration = as.numeric(duration1 - duration2)) %>%  
+  mutate(duration = as.numeric(duration1 - duration2)) 
+
+group_all_b %>% 
   select(groupID, study_period, date, duration, Kur:Yun) %>% 
   select(-c(TY,IT, LK, KR, KM, TG)) %>% 
   pivot_longer(cols = Kur:Yun,
@@ -258,7 +260,7 @@ ggsave("figures/p_injury_season.tif", p_injury_season,
 
 #### モデリング  
 ### モデリング  
-それでは、モデリングを行います。分析には、その日個体追跡を行わなかった個体のデータのみを用います。これは、個体追跡をした個体は被攻撃頻度が他の個体に比べて過大評価されてしまう傾向があるからです。また、先ほどと同様に240分以上群れを追跡した日のデータのみを用います。    
+それでは、モデリングを行います。分析には、先ほどと同様に240分以上群れを追跡した日のデータのみを用います。    
 
 - 分布: ベルヌーイ分布    
 - リンク関数: ロジット関数    
@@ -269,7 +271,6 @@ ggsave("figures/p_injury_season.tif", p_injury_season,
 ```{r}
 injury_analysis <- injury_final %>% 
   filter(duration >= 240) %>% 
-  filter(focal == 0) %>% 
   filter(!str_detect(study_period, "nm")) %>% 
   mutate(rate_agg = no_agg*60/duration) %>% 
   mutate(rate_agg_std = standardize(rate_agg))
@@ -378,7 +379,7 @@ estimate_slopes(m_agginj,
 #### 結果の図示  
 ```{r}
 predict_agginj <- predict_response(m_agginj,
-                                   terms = c("rate_agg_std[-0.4:13.4, by = 0.1]", "rs2[0:1, by = 1]"),
+                                   terms = c("rate_agg_std[-0.42:16.25, by = 0.1]", "rs2[0:1, by = 1]"),
                                    type = "fixed",
                                    margin = "marginalmeans",
                                    interval = "confidence",
@@ -394,7 +395,7 @@ injury_analysis %>%
   mutate(rs2 = as.factor(rs2)) %>% 
   ggplot(aes(x = rate_agg, y = injury01))+
   geom_point(shape = "|", size = 3,
-             alpha = 0.5,
+             alpha = 0.8,
              aes(color = rs2)) +
   scale_color_nejm(labels = c("Anestrus", "Estrous")) +
   geom_line(data = predict_agginj,
@@ -411,8 +412,8 @@ injury_analysis %>%
                         labels = c("Anestrus", "Estrous")) +
   theme_bw(base_size = 12) +
   scale_y_continuous(breaks = seq(0,1,by = 0.2)) +
-  scale_x_continuous(breaks = seq(0,1.4, 0.2)) +
-  labs(x = "Frequency of aggression", y = "Presence of new injury",
+  scale_x_continuous(breaks = seq(0,1.8, 0.2)) +
+  labs(x = "Frequency of aggression (times/h)", y = "Presence of new injury",
        color = "Estrous status", linetype = "Estrous status", fill = "Estrous status") +
   theme(text = element_text(family = "Times New Roman"),
         aspect.ratio = 1)  -> p_agginj_all
