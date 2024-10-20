@@ -191,7 +191,7 @@ datatable(focal_combined_prox_final,
           filter = list(position = "top"))
 ```
 
-## 群れ外オス数やTY、ITの有無と休息集団サイズの関連   
+## 休息集団サイズの分析   
 ここでは、TYやITの有無を含む様々な要因が個体追跡中の休息集団サイズ(正確には、休息集団内のメス数)に影響するかを検討します。  
 
 ### 交尾期(非発情メス)  
@@ -272,21 +272,6 @@ m_cohesion_an <- brm(log(mean_RG) ~ TY_presence + IT_presence + ntm_std + est_st
                                  data = cohesion_data_an,
                                  file = "model/m_cohesion_an.rds")
 
-## 切断モデル  
-m_cohesion_an_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_presence + ntm_std + est_std + 
-                       female_std + kin_std  + study_period  + (1|subject),
-                                 family = student,
-                                 iter = 7000, warmup = 2000, seed = 123,
-                                 prior = c(prior(student_t(4,0,5), class = "b"),
-                                           prior(student_t(4,0,10), class = "Intercept"),
-                                           prior(student_t(4,0,10), class = "sd"),
-                                           prior(student_t(4,0,10), class = "nu"),
-                                           prior(student_t(4,0,10), class = "sigma")),
-                                 control = list(adapt_delta = 0.99, max_treedepth = 20),
-                                 backend = "cmdstanr",
-                                 data = cohesion_data_an,
-                                 file = "model/m_cohesion_an.rds")
-
 ## 2019~2020年
 cohesion_data_an_bf21 <- cohesion_data_an %>% 
   filter(study_period != "m21") %>% 
@@ -310,19 +295,6 @@ m_cohesion_an_bf21 <- brm(log(mean_RG) ~ TY_presence + IT_presence + ntm_std + e
                                  backend = "cmdstanr",
                                  data = cohesion_data_an_bf21,
                                  file = "model/m_cohesion_an_bf21.rds")
-
-## 切断モデル  
-m_cohesion_an_bf21_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_presence + ntm_std + est_std + 
-                                  female_std + kin_std  + study_period + (1|subject),
-                                family = student,
-                                iter = 11000, warmup = 1000, seed = 123,
-                                prior = c(prior(student_t(4,0,5), class = "b"),
-                                          prior(student_t(4,0,10), class = "Intercept"),
-                                          prior(student_t(4,0,10), class = "sd")),
-                                control = list(adapt_delta = 0.99, max_treedepth = 20),
-                                backend = "cmdstanr",
-                                data = cohesion_data_an_bf21,
-                                file = "model/m_cohesion_an_bf21.rds")
 ```
 
 #### モデルチェック  
@@ -554,24 +526,24 @@ ggsave("figures/p_cohesion_an_IT.tif", p_cohesion_an_IT,
 ```
 <br/>  
 
-### 交尾期(発情メス)  
+### 非交尾期   
 #### データの加工  
-まず、非発情メスについて分析を行うためのデータを作成します。連続変数は標準化します。  
+続いて、非交尾期について分析を行うためのデータを作成します。連続変数は標準化します。  
 
 - 休息ポイント数が10以上の個体追跡セッションのみを使用   
 - ハドリングのポイントは除去   
 - 地上休息のみを含む  
 
 ```{r}
-cohesion_data_es <- focal_combined_prox_final %>% 
+cohesion_data_nm <- focal_combined_prox_final %>% 
   mutate(rate_female = no_female/max_female) %>%
-  filter(rs2 == 1) %>% 
+  filter(str_detect(study_period, "nm")) %>% 
   replace_na(list(hud = 0)) %>% 
-  filter(hud != "1" & consort == 0) %>% 
+  filter(hud != "1") %>% 
   filter(RG == 1 & T_G == "G") %>% 
-  group_by(date, no_focal, subject, study_period, rate_agg_6yo, no_ntm, 
-           no_est, no_male, no_female, TY_presence,
-           no_kin, IT_presence, CSI_TY) %>% 
+  group_by(date, no_focal, subject, study_period, 
+           no_female, TY_presence,
+           no_kin, IT_presence) %>% 
   summarise(sum_RG = sum(RG_female_plus1),
             n = n()) %>% 
   ungroup() %>% 
@@ -579,23 +551,18 @@ cohesion_data_es <- focal_combined_prox_final %>%
          IT_presence = as.factor(IT_presence)) %>%
   filter(study_period != "m18") %>% 
   filter(n >= 10) %>% 
-  mutate(ntm_std = standardize(no_ntm),
-         male_std = standardize(no_male),
-         est_std = standardize(no_est),
-         kin_std = standardize(no_kin),
+  mutate(kin_std = standardize(no_kin),
          female_std = standardize(no_female),
-         rate_agg_std = standardize(rate_agg_6yo),
-         CSI_TY_std = standardize(CSI_TY),
          mean_RG = sum_RG/n)
 
-cohesion_data_es
+cohesion_data_nm
 ```
 <br/>  
 
 共変量と応答変数(平均休息集団サイズ)の関連を図示すると以下のようになります。  
 ```{r}
-cohesion_data_es %>% 
-  pivot_longer(cols = c(no_ntm, no_est, no_female, rate_agg_6yo, kin_std, CSI_TY),
+cohesion_data_nm %>% 
+  pivot_longer(cols = c(no_female,  no_kin),
                names_to = "type",
                values_to = "value") %>% 
   ggplot(aes(x = value, y = mean_RG)) +
@@ -618,8 +585,7 @@ cohesion_data_es %>%
 
 ```{r}
 ## 2019~2021年
-m_cohesion_es <- brm(log(mean_RG) ~ TY_presence + IT_presence + ntm_std + est_std + 
-                       female_std + kin_std  + study_period + (1|subject),
+m_cohesion_nm <- brm(log(mean_RG) ~ TY_presence + kin_std  + study_period + (1|subject),
                                  family = student,
                                  iter = 11000, warmup = 1000, seed = 123,
                                  prior = c(prior(student_t(4,0,5), class = "b"),
@@ -629,12 +595,12 @@ m_cohesion_es <- brm(log(mean_RG) ~ TY_presence + IT_presence + ntm_std + est_st
                                            prior(student_t(4,0,10), class = "sigma")),
                                  control = list(adapt_delta = 0.99, max_treedepth = 20),
                                  backend = "cmdstanr",
-                                 data = cohesion_data_es,
-                                 file = "model/m_cohesion_es.rds")
+                                 data = cohesion_data_nm,
+                                 file = "model/m_cohesion_nm.rds")
 
 ## 切断モデル  
-m_cohesion_es_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_presence + ntm_std + est_std + 
-                       female_std + kin_std  + study_period  + (1|subject),
+m_cohesion_nm_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + 
+                       kin_std  + study_period + (1|subject),
                                  family = student,
                                  iter = 7000, warmup = 2000, seed = 123,
                                  prior = c(prior(student_t(4,0,5), class = "b"),
@@ -644,23 +610,17 @@ m_cohesion_es_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_presenc
                                            prior(student_t(4,0,10), class = "sigma")),
                                  control = list(adapt_delta = 0.99, max_treedepth = 20),
                                  backend = "cmdstanr",
-                                 data = cohesion_data_es,
-                                 file = "model/m_cohesion_es.rds")
+                                 data = cohesion_data_nm,
+                                 file = "model/m_cohesion_nm.rds")
 
 ## 2019~2020年
-cohesion_data_es_bf21 <- cohesion_data_es %>% 
-  filter(study_period != "m21") %>% 
-  mutate(ntm_std = standardize(no_ntm),
-         male_std = standardize(no_male),
-         est_std = standardize(no_est),
-         kin_std = standardize(no_kin),
+cohesion_data_nm_bf21 <- cohesion_data_nm %>% 
+  filter(study_period != "m22") %>% 
+  mutate(kin_std = standardize(no_kin),
          female_std = standardize(no_female),
-         rate_agg_std = standardize(rate_agg_6yo),
-         CSI_TY_std = standardize(CSI_TY),
          mean_RG = sum_RG/n)
 
-m_cohesion_es_bf21 <- brm(log(mean_RG) ~ TY_presence + IT_presence + ntm_std + est_std + 
-                       female_std + kin_std  + study_period + (1|subject),
+m_cohesion_nm_bf21 <- brm(log(mean_RG) ~ TY_presence + kin_std  + study_period + (1|subject),
                                  family = student,
                                  iter = 11000, warmup = 1000, seed = 123,
                                  prior = c(prior(student_t(4,0,5), class = "b"),
@@ -668,11 +628,11 @@ m_cohesion_es_bf21 <- brm(log(mean_RG) ~ TY_presence + IT_presence + ntm_std + e
                                            prior(student_t(4,0,10), class = "sd")),
                                  control = list(adapt_delta = 0.99, max_treedepth = 20),
                                  backend = "cmdstanr",
-                                 data = cohesion_data_es_bf21,
-                                 file = "model/m_cohesion_es_bf21.rds")
+                                 data = cohesion_data_nm_bf21,
+                                 file = "model/m_cohesion_nm_bf21.rds")
 
 ## 切断モデル  
-m_cohesion_es_bf21_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_presence + ntm_std + est_std + 
+m_cohesion_nm_bf21_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_presence + ntm_std + est_std + 
                                   female_std + kin_std  + study_period + (1|subject),
                                 family = student,
                                 iter = 11000, warmup = 1000, seed = 123,
@@ -681,39 +641,39 @@ m_cohesion_es_bf21_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_pr
                                           prior(student_t(4,0,10), class = "sd")),
                                 control = list(adapt_delta = 0.99, max_treedepth = 20),
                                 backend = "cmdstanr",
-                                data = cohesion_data_es_bf21,
-                                file = "model/m_cohesion_es_bf21.rds")
+                                data = cohesion_data_nm_bf21,
+                                file = "model/m_cohesion_nm_bf21.rds")
 ```
 
 #### モデルチェック  
-まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。あまり当てはまりが良くないよう。  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
 ```{r, fig.height = 4}
 ## 全期間    
-dh_cohesion_es <- dh_check_brms(m_cohesion_es, quantreg = TRUE)
+dh_cohesion_nm <- dh_check_brms(m_cohesion_nm, quantreg = TRUE)
 
 ## 21年より前
-dh_cohesion_es_bf21 <- dh_check_brms(m_cohesion_es_bf21, quantreg = TRUE)
+dh_cohesion_nm_bf21 <- dh_check_brms(m_cohesion_nm_bf21, quantreg = TRUE)
 ```
 <br/>  
 
 多重共線性の問題もありません。  
 ```{r}
 ## 全期間   
-check_collinearity(m_cohesion_es)
+check_collinearity(m_cohesion_nm)
 
 ## 21年より前
-check_collinearity(m_cohesion_es_bf21)
+check_collinearity(m_cohesion_nm_bf21)
 ```
 
 bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
 ```{r, fig.height = 4.5}
 ## 全期間    
-pp_check(m_cohesion_es, ndraws = 100)+
+pp_check(m_cohesion_nm, ndraws = 100)+
   theme_bw()+
   theme(aspect.ratio = 0.9)
 
 ## 21年より前
-pp_check(m_cohesion_es_bf21, ndraws = 100)+
+pp_check(m_cohesion_nm_bf21, ndraws = 100)+
   theme_bw()+
   theme(aspect.ratio = 0.9)
 ```  
@@ -721,14 +681,14 @@ pp_check(m_cohesion_es_bf21, ndraws = 100)+
 
 Rhatにも問題はなく、収束の問題はないよう。  
 ```{r, fig.dim = c(8,4)}
-data.frame(Rhat = brms::rhat(m_cohesion_es)) %>% 
+data.frame(Rhat = brms::rhat(m_cohesion_nm)) %>% 
   ggplot(aes(x = Rhat))+
   geom_histogram(fill = "white",
                  color = "black")+
   theme_bw()+
   theme(aspect.ratio = 1)
 
-data.frame(Rhat = brms::rhat(m_cohesion_es_bf21)) %>% 
+data.frame(Rhat = brms::rhat(m_cohesion_nm_bf21)) %>% 
   ggplot(aes(x = Rhat))+
   geom_histogram(fill = "white",
                  color = "black")+
@@ -740,15 +700,290 @@ data.frame(Rhat = brms::rhat(m_cohesion_es_bf21)) %>%
 #### 結果の確認  
 まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
 ```{r, echo = FALSE}
-summary_cohesion_es <- summary(m_cohesion_es)
+summary_cohesion_nm <- summary(m_cohesion_nm)
 
-model_parameters(m_cohesion_es,  ci = 0.95,
+model_parameters(m_cohesion_nm,  ci = 0.95,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
   dplyr::select(1,3,5,6, 7,8) %>% 
-  mutate("Bulk ESS" = summary_cohesion_es$fixed$Bulk_ESS,
-         "Tail ESS" = summary_cohesion_es$fixed$Tail_ESS) %>% 
+  mutate("Bulk ESS" = summary_cohesion_nm$fixed$Bulk_ESS,
+         "Tail ESS" = summary_cohesion_nm$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_presence1",
+                                 "b_kin_std", 
+                                 "b_study_periodnm21","b_study_periodnm22")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_study_periodnm21" = "Study period (NMS21 vs NMS19)",
+                                                  "b_study_periodnm22" = "Study period (NMS22 vs NMS19)",
+                                                  "^b_TY_presence1$" = "TY present? (Yes vs No)",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_cohesion_nm
+
+table_cohesion_nm
+
+write_csv(table_cohesion_nm, "tables/table_cohesion_nm.csv")
+```
+<br/>  
+
+続いて、2021年のデータを除いたモデルについて確認する。  
+```{r, echo = FALSE}
+summary_cohesion_nm_bf21 <- summary(m_cohesion_nm_bf21)
+
+model_parameters(m_cohesion_nm_bf21,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,3,5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_cohesion_nm_bf21$fixed$Bulk_ESS,
+         "Tail ESS" = summary_cohesion_nm_bf21$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_presence1",
+                                 "b_kin_std", 
+                                 "b_study_periodnm21","b_study_periodnm22")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_study_periodnm21" = "Study period (NMS21 vs NMS19)",
+                                                  "b_study_periodnm22" = "Study period (NMS22 vs NMS19)",
+                                                  "^b_TY_presence1$" = "TY present? (Yes vs No)",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_cohesion_nm_bf21
+
+table_cohesion_nm_bf21
+
+write_csv(table_cohesion_nm_bf21, "tables/table_cohesion_nm_bf21.csv")
+```
+<br/>  
+
+#### 結果の図示  
+最後に、結果の図示をします。  
+
+まず、TYの有無についてです。  
+```{r}
+emm_cohesion_nm_TY <- emmeans(m_cohesion_nm,
+                              ~TY_presence)
+
+cohesion_data_nm %>% 
+  ggplot(aes(x = TY_presence, y = log(mean_RG))) +
+  geom_violin(bw = 0.2,
+              scale = "width") +
+  geom_boxplot(size = 0.5,
+               linewidth = 0.4,
+               width = 0.2,
+               fill = "grey",
+               outlier.alpha = 0) +
+  geom_point(data = emm_cohesion_nm_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean),
+             size = 3,
+             color = "white") +
+  geom_errorbar(data = emm_cohesion_nm_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean, ymin = lower.HPD,
+                 ymax = upper.HPD),
+             size = 0.4,
+             color = "white",
+             width = 0.1) +
+  theme_bw(base_size = 12) +
+  scale_x_discrete(labels = c("*TY* absent", "*TY* present")) +
+  labs(x = "", y = "log(mean resting group size)") +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.text.x = element_markdown(),
+        aspect.ratio = 1) -> p_cohesion_nm_TY
+
+p_cohesion_nm_TY
+
+ggsave("figures/p_cohesion_nm_TY.tif", p_cohesion_nm_TY,
+       dpi = 2000, units = "mm",
+       width = 100, height = 100)
+```
+<br/>  
+
+## 近接個体数の分析(休息中)  
+ここでは、TYやITの有無を含む様々な要因が個体追跡中の周辺メス数に影響するかを検討します。  
+
+### 交尾期(非発情メス)  
+#### データの加工  
+まず、非発情メスについて分析を行うためのデータを作成します。連続変数は標準化します。  
+
+- 休息ポイント数が10以上の個体追跡セッションのみを使用   
+- ハドリングのポイントは除去   
+- 地上休息のみを含む  
+
+```{r}
+prox_data_an_RG <- focal_combined_prox_final %>% 
+  mutate(rate_female = no_female/max_female) %>%
+  filter(rs2 == 0) %>% 
+  replace_na(list(hud = 0)) %>% 
+  filter(hud != "1") %>% 
+  filter(RG == 1 & T_G == "G") %>% 
+  group_by(date, no_focal, subject, study_period, rate_agg_6yo, no_ntm, 
+           no_est, no_male, no_female, TY_presence,
+           no_kin, IT_presence, CSI_TY) %>% 
+  summarise(sum_prox = sum(x3m_female + 1),
+            n = n()) %>% 
+  ungroup() %>% 
+  mutate(TY_presence = as.factor(TY_presence),
+         IT_presence = as.factor(IT_presence)) %>%
+  filter(study_period != "m18") %>% 
+  filter(n >= 10) %>% 
+  mutate(ntm_std = standardize(no_ntm),
+         male_std = standardize(no_male),
+         est_std = standardize(no_est),
+         kin_std = standardize(no_kin),
+         female_std = standardize(no_female),
+         rate_agg_std = standardize(rate_agg_6yo),
+         CSI_TY_std = standardize(CSI_TY),
+         mean_prox = sum_prox/n)
+
+prox_data_an_RG
+```
+<br/>  
+
+共変量と応答変数(平均休息集団サイズ)の関連を図示すると以下のようになります。  
+```{r}
+prox_data_an_RG %>% 
+  pivot_longer(cols = c(no_ntm, no_est, no_female, rate_agg_6yo, kin_std, CSI_TY),
+               names_to = "type",
+               values_to = "value") %>% 
+  ggplot(aes(x = value, y = mean_prox)) +
+  geom_point(shape = 1) +
+  facet_rep_wrap(~ type,
+                 scales = "free") +
+  theme_bw(base_size = 12) +
+  theme(aspect.ratio = 1) +
+  labs(x = "", y = "Mean resting group size")
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。以下のように行いました。連続変数は標準化しています。また、`IT`の効果を見る際には、2021年交尾期を除くモデルを作成しました。  
+
+- 応答変数: log(平均休息集団サイズ(メスのみ))  
+- 分布: Studentのt分布  
+- 説明変数: TYの在不在(`TY_presence`)、ITの在不在(`IT_presence`)、群れ外オス数(`ntm_std`)、集団内の発情メス数(`est_std`)、集団内のメス数(`female_std`)、集団内の血縁メス数(`kin_est`)、調査期間(`study_period`)  
+- ランダム切片: `subject`  
+
+```{r}
+## 2019~2021年
+m_prox_an_RG <- brm(log(mean_prox) ~ TY_presence + IT_presence + ntm_std + est_std + 
+                      female_std + kin_std  + study_period +  (1|subject) + (1|date),
+                    family = student,
+                    iter = 11000, warmup = 1000, seed = 123,
+                    prior = c(prior(student_t(4,0,5), class = "b"),
+                              prior(student_t(4,0,10), class = "Intercept"),
+                              prior(student_t(4,0,10), class = "sd"),
+                              prior(student_t(4,0,10), class = "nu"),
+                              prior(student_t(4,0,10), class = "sigma")),
+                    control = list(adapt_delta = 0.99, max_treedepth = 20),
+                    backend = "cmdstanr",
+                    data = prox_data_an_RG,
+                    file = "model/m_prox_an_RG.rds")
+
+## 2019~2020年
+prox_data_an_RG_bf21 <- prox_data_an_RG %>% 
+  filter(study_period != "m21") %>% 
+  mutate(ntm_std = standardize(no_ntm),
+         male_std = standardize(no_male),
+         est_std = standardize(no_est),
+         kin_std = standardize(no_kin),
+         female_std = standardize(no_female),
+         rate_agg_std = standardize(rate_agg_6yo),
+         CSI_TY_std = standardize(CSI_TY),
+         mean_prox = sum_prox/n)
+
+m_prox_an_RG_bf21 <- brm(log(mean_prox) ~ TY_presence + IT_presence + ntm_std + est_std + 
+                       female_std + kin_std  + study_period + (1|subject),
+                                 family = student,
+                                 iter = 11000, warmup = 1000, seed = 123,
+                                 prior = c(prior(student_t(4,0,5), class = "b"),
+                                           prior(student_t(4,0,10), class = "Intercept"),
+                                           prior(student_t(4,0,10), class = "sd")),
+                                 control = list(adapt_delta = 0.99, max_treedepth = 20),
+                                 backend = "cmdstanr",
+                                 data = prox_data_an_RG_bf21,
+                                 file = "model/m_prox_an_RG_bf21.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
+```{r, fig.height = 4}
+## 全期間    
+dh_prox_an_RG <- dh_check_brms(m_prox_an_RG, quantreg = TRUE)
+
+## 21年より前
+dh_prox_an_RG_bf21 <- dh_check_brms(m_prox_an_RG_bf21, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_prox_an_RG)
+
+## 21年より前
+check_collinearity(m_prox_an_RG_bf21)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_prox_an_RG, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+
+## 21年より前
+pp_check(m_prox_an_RG_bf21, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_prox_an_RG)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+
+data.frame(Rhat = brms::rhat(m_prox_an_RG_bf21)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_prox_an_RG <- summary(m_prox_an_RG)
+
+model_parameters(m_prox_an_RG,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,3,5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_prox_an_RG$fixed$Bulk_ESS,
+         "Tail ESS" = summary_prox_an_RG$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
   dplyr::select(c(1,2,3, 9), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
@@ -772,25 +1007,25 @@ model_parameters(m_cohesion_es,  ci = 0.95,
                                                   "b_est_std" = "No. of estrous females on the day",
                                                   "b_kin_std" = "No. of kin individuals on the day"))) %>% 
   rename("Explanatory variables" = "Parameter") %>% 
-  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_cohesion_es
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_prox_an_RG
 
-table_cohesion_es
+table_prox_an_RG
 
-write_csv(table_cohesion_es, "tables/table_cohesion_es.csv")
+write_csv(table_prox_an_RG, "tables/table_prox_an_RG.csv")
 ```
 <br/>  
 
 続いて、2021年のデータを除いたモデルについて確認する。  
 ```{r, echo = FALSE}
-summary_cohesion_es_bf21 <- summary(m_cohesion_es_bf21)
+summary_prox_an_RG_bf21 <- summary(m_prox_an_RG_bf21)
 
-model_parameters(m_cohesion_es_bf21,  ci = 0.95,
+model_parameters(m_prox_an_RG_bf21,  ci = 0.95,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
   dplyr::select(1,3,5,6, 7,8) %>% 
-  mutate("Bulk ESS" = summary_cohesion_es_bf21$fixed$Bulk_ESS,
-         "Tail ESS" = summary_cohesion_es_bf21$fixed$Tail_ESS) %>% 
+  mutate("Bulk ESS" = summary_prox_an_RG_bf21$fixed$Bulk_ESS,
+         "Tail ESS" = summary_prox_an_RG_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
   dplyr::select(c(1,2,3, 9), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
@@ -814,11 +1049,11 @@ model_parameters(m_cohesion_es_bf21,  ci = 0.95,
                                                   "b_est_std" = "No. of estrous females on the day",
                                                   "b_kin_std" = "No. of kin individuals on the day"))) %>% 
   rename("Explanatory variables" = "Parameter") %>% 
-  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_cohesion_es_bf21
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_prox_an_RG_bf21
 
-table_cohesion_es_bf21
+table_prox_an_RG_bf21
 
-write_csv(table_cohesion_es_bf21, "tables/table_cohesion_es_bf21.csv")
+write_csv(table_prox_an_RG_bf21, "tables/table_prox_an_RG_bf21.csv")
 ```
 <br/>  
 
@@ -827,11 +1062,11 @@ write_csv(table_cohesion_es_bf21, "tables/table_cohesion_es_bf21.csv")
 
 まず、TYの有無についてです。  
 ```{r}
-emm_cohesion_es_TY <- emmeans(m_cohesion_es,
-                              ~TY_presence)
+emm_prox_an_RG_TY <- emmeans(m_prox_an_RG,
+                          ~TY_presence)
 
-cohesion_data_es %>% 
-  ggplot(aes(x = TY_presence, y = log(mean_RG))) +
+prox_data_an_RG %>% 
+  ggplot(aes(x = TY_presence, y = log(mean_prox))) +
   geom_violin(bw = 0.2,
               scale = "width") +
   geom_boxplot(size = 0.5,
@@ -839,13 +1074,13 @@ cohesion_data_es %>%
                width = 0.2,
                fill = "grey",
                outlier.alpha = 0) +
-  geom_point(data = emm_cohesion_es_TY %>% 
+  geom_point(data = emm_prox_an_RG_TY %>% 
                data.frame() %>% 
                mutate(TY_presence = as.factor(TY_presence)),
              aes(y = emmean),
              size = 3,
              color = "white") +
-  geom_errorbar(data = emm_cohesion_es_TY %>% 
+  geom_errorbar(data = emm_prox_an_RG_TY %>% 
                data.frame() %>% 
                mutate(TY_presence = as.factor(TY_presence)),
              aes(y = emmean, ymin = lower.HPD,
@@ -854,18 +1089,18 @@ cohesion_data_es %>%
              color = "white",
              width = 0.1) +
   geom_signif(comparisons = list(c("0", "1")),
-              y_position = 2.5,
+              y_position = 2.1,
               annotations = "***") +
   theme_bw(base_size = 12) +
   scale_x_discrete(labels = c("*TY* absent", "*TY* present")) +
-  labs(x = "", y = "log(mean resting group size)") +
+  labs(x = "", y = "log(mean no. of females within 3m)") +
   theme(text = element_text(family = "Times New Roman"),
         axis.text.x = element_markdown(),
-        aspect.ratio = 1) -> p_cohesion_es_TY
+        aspect.ratio = 1) -> p_prox_an_RG_TY
 
-p_cohesion_es_TY
+p_prox_an_RG_TY
 
-ggsave("figures/p_cohesion_es_TY.tif", p_cohesion_es_TY,
+ggsave("figures/p_prox_an_RG_TY.tif", p_prox_an_RG_TY,
        dpi = 2000, units = "mm",
        width = 100, height = 100)
 ```
@@ -873,11 +1108,11 @@ ggsave("figures/p_cohesion_es_TY.tif", p_cohesion_es_TY,
 
 続いて、ITについてです。  
 ```{r}
-emm_cohesion_es_IT <- emmeans(m_cohesion_es_bf21,
-                              ~IT_presence)
+emm_prox_an_RG_IT <- emmeans(m_prox_an_RG_bf21,
+                             ~IT_presence)
 
-cohesion_data_es_bf21 %>% 
-  ggplot(aes(x = IT_presence, y = log(mean_RG))) +
+prox_data_an_RG_bf21 %>% 
+  ggplot(aes(x = IT_presence, y = log(mean_prox))) +
   geom_violin(bw = 0.2,
               scale = "width") +
   geom_boxplot(size = 0.5,
@@ -885,13 +1120,13 @@ cohesion_data_es_bf21 %>%
                width = 0.2,
                fill = "grey",
                outlier.alpha = 0) +
-  geom_point(data = emm_cohesion_es_IT %>% 
+  geom_point(data = emm_prox_an_RG_IT %>% 
                data.frame() %>% 
                mutate(IT_presence = as.factor(IT_presence)),
              aes(y = emmean),
              size = 3,
              color = "white") +
-  geom_errorbar(data = emm_cohesion_es_IT %>% 
+  geom_errorbar(data = emm_prox_an_RG_IT %>% 
                data.frame() %>% 
                mutate(IT_presence = as.factor(IT_presence)),
              aes(y = emmean, ymin = lower.HPD,
@@ -904,11 +1139,724 @@ cohesion_data_es_bf21 %>%
   labs(x = "", y = "log(mean resting group size)") +
   theme(text = element_text(family = "Times New Roman"),
         axis.text.x = element_markdown(),
-        aspect.ratio = 1) -> p_cohesion_es_IT
+        aspect.ratio = 1) -> p_prox_an_RG_IT
 
-p_cohesion_es_IT
+p_prox_an_RG_IT
 
-ggsave("figures/p_cohesion_es_IT.tif", p_cohesion_es_IT,
+ggsave("figures/p_prox_an_RG_IT.tif", p_prox_an_RG_IT,
+       dpi = 2000, units = "mm",
+       width = 100, height = 100)
+```
+<br/>  
+
+### 非交尾期   
+#### データの加工  
+続いて、非交尾期について分析を行うためのデータを作成します。連続変数は標準化します。  
+
+- 休息ポイント数が10以上の個体追跡セッションのみを使用   
+- ハドリングのポイントは除去   
+- 地上休息のみを含む  
+
+```{r}
+prox_data_nm_RG <- focal_combined_prox_final %>% 
+  mutate(rate_female = no_female/max_female) %>%
+  filter(str_detect(study_period, "nm")) %>% 
+  replace_na(list(hud = 0)) %>% 
+  filter(hud != "1") %>% 
+  filter(RG == 1 & T_G == "G") %>% 
+  group_by(date, no_focal, subject, study_period, 
+           no_female, TY_presence,
+           no_kin, IT_presence) %>% 
+  summarise(sum_prox = sum(x3m_female + 1),
+            n = n()) %>% 
+  ungroup() %>% 
+  mutate(TY_presence = as.factor(TY_presence),
+         IT_presence = as.factor(IT_presence)) %>%
+  filter(study_period != "m18") %>% 
+  filter(n >= 10) %>% 
+  mutate(kin_std = standardize(no_kin),
+         female_std = standardize(no_female),
+         mean_prox = sum_prox/n)
+
+prox_data_nm_RG
+```
+<br/>  
+
+共変量と応答変数(平均休息集団サイズ)の関連を図示すると以下のようになります。  
+```{r}
+prox_data_nm_RG %>% 
+  pivot_longer(cols = c(no_female,  no_kin),
+               names_to = "type",
+               values_to = "value") %>% 
+  ggplot(aes(x = value, y = mean_prox)) +
+  geom_point(shape = 1) +
+  facet_rep_wrap(~ type,
+                 scales = "free") +
+  theme_bw(base_size = 12) +
+  theme(aspect.ratio = 1) +
+  labs(x = "", y = "Mean resting group size")
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。以下のように行いました。連続変数は標準化しています。また、`IT`の効果を見る際には、2021年交尾期を除くモデルを作成しました。  
+
+- 応答変数: log(平均休息集団サイズ(メスのみ))  
+- 分布: Studentのt分布  
+- 説明変数: TYの在不在(`TY_presence`)、ITの在不在(`IT_presence`)、群れ外オス数(`ntm_std`)、集団内の発情メス数(`est_std`)、集団内のメス数(`female_std`)、集団内の血縁メス数(`kin_est`)、調査期間(`study_period`)  
+- ランダム切片: `subject`  
+
+```{r}
+## 2019~2021年
+m_prox_nm_RG <- brm(log(mean_prox) ~ TY_presence + kin_std  + study_period + (1|subject),
+                                 family = student,
+                                 iter = 11000, warmup = 1000, seed = 123,
+                                 prior = c(prior(student_t(4,0,5), class = "b"),
+                                           prior(student_t(4,0,10), class = "Intercept"),
+                                           prior(student_t(4,0,10), class = "sd"),
+                                           prior(student_t(4,0,10), class = "nu"),
+                                           prior(student_t(4,0,10), class = "sigma")),
+                                 control = list(adapt_delta = 0.99, max_treedepth = 20),
+                                 backend = "cmdstanr",
+                                 data = prox_data_nm_RG,
+                                 file = "model/m_prox_nm_RG.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
+```{r, fig.height = 4}
+## 全期間    
+dh_prox_nm_RG <- dh_check_brms(m_prox_nm_RG, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_prox_nm_RG)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_prox_nm_RG, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_prox_nm_RG)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_prox_nm_RG <- summary(m_prox_nm_RG)
+
+model_parameters(m_prox_nm_RG,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,3,5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_prox_nm_RG$fixed$Bulk_ESS,
+         "Tail ESS" = summary_prox_nm_RG$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_presence1",
+                                 "b_kin_std", 
+                                 "b_study_periodnm21","b_study_periodnm22")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_study_periodnm21" = "Study period (NMS21 vs NMS19)",
+                                                  "b_study_periodnm22" = "Study period (NMS22 vs NMS19)",
+                                                  "^b_TY_presence1$" = "TY present? (Yes vs No)",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_prox_nm_RG
+
+table_prox_nm_RG
+
+write_csv(table_prox_nm_RG, "tables/table_prox_nm_RG.csv")
+```
+<br/>  
+
+#### 結果の図示  
+最後に、結果の図示をします。  
+
+まず、TYの有無についてです。  
+```{r}
+emm_prox_nm_RG_TY <- emmeans(m_prox_nm_RG,
+                          ~TY_presence)
+
+prox_data_nm_RG %>% 
+  ggplot(aes(x = TY_presence, y = log(mean_prox))) +
+  geom_violin(bw = 0.2,
+              scale = "width") +
+  geom_boxplot(size = 0.5,
+               linewidth = 0.4,
+               width = 0.2,
+               fill = "grey",
+               outlier.alpha = 0) +
+  geom_point(data = emm_prox_nm_RG_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean),
+             size = 3,
+             color = "white") +
+  geom_errorbar(data = emm_prox_nm_RG_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean, ymin = lower.HPD,
+                 ymax = upper.HPD),
+             size = 0.4,
+             color = "white",
+             width = 0.1) +
+  theme_bw(base_size = 12) +
+  scale_x_discrete(labels = c("*TY* absent", "*TY* present")) +
+  labs(x = "", y = "log(mean resting group size)") +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.text.x = element_markdown(),
+        aspect.ratio = 1) -> p_prox_nm_RG_TY
+
+p_prox_nm_RG_TY
+
+ggsave("figures/p_prox_nm_RG_TY.tif", p_prox_nm_RG_TY,
+       dpi = 2000, units = "mm",
+       width = 100, height = 100)
+```
+<br/>  
+
+## 近接個体数の分析(採食中)  
+最後に、TYやITの有無を含む様々な要因が個体追跡中の周辺メス数に影響するかを検討します。  
+
+### 交尾期(非発情メス)  
+#### データの加工  
+まず、非発情メスについて分析を行うためのデータを作成します。連続変数は標準化します。  
+
+- 休息ポイント数が10以上の個体追跡セッションのみを使用   
+- ハドリングのポイントは除去   
+- 地上休息のみを含む  
+
+```{r}
+prox_data_an_F <- focal_combined_prox_final %>% 
+  mutate(rate_female = no_female/max_female) %>%
+  filter(rs2 == 0) %>% 
+  replace_na(list(hud = 0)) %>% 
+  filter(hud != "1") %>% 
+  filter(activity == "F" & T_G == "G") %>% 
+  group_by(date, no_focal, subject, study_period, rate_agg_6yo, no_ntm, 
+           no_est, no_male, no_female, TY_presence,
+           no_kin, IT_presence, CSI_TY) %>% 
+  summarise(sum_prox = sum(x3m_female + 1),
+            n = n()) %>% 
+  ungroup() %>% 
+  mutate(TY_presence = as.factor(TY_presence),
+         IT_presence = as.factor(IT_presence)) %>%
+  filter(study_period != "m18") %>% 
+  filter(n >= 10) %>% 
+  mutate(ntm_std = standardize(no_ntm),
+         male_std = standardize(no_male),
+         est_std = standardize(no_est),
+         kin_std = standardize(no_kin),
+         female_std = standardize(no_female),
+         rate_agg_std = standardize(rate_agg_6yo),
+         CSI_TY_std = standardize(CSI_TY),
+         mean_prox = sum_prox/n)
+
+prox_data_an_F
+```
+<br/>  
+
+共変量と応答変数(平均休息集団サイズ)の関連を図示すると以下のようになります。  
+```{r}
+prox_data_an_F %>% 
+  pivot_longer(cols = c(no_ntm, no_est, no_female, rate_agg_6yo, kin_std, CSI_TY),
+               names_to = "type",
+               values_to = "value") %>% 
+  ggplot(aes(x = value, y = mean_prox)) +
+  geom_point(shape = 1) +
+  facet_rep_wrap(~ type,
+                 scales = "free") +
+  theme_bw(base_size = 12) +
+  theme(aspect.ratio = 1) +
+  labs(x = "", y = "Mean resting group size")
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。以下のように行いました。連続変数は標準化しています。また、`IT`の効果を見る際には、2021年交尾期を除くモデルを作成しました。  
+
+- 応答変数: log(平均休息集団サイズ(メスのみ))  
+- 分布: Studentのt分布  
+- 説明変数: TYの在不在(`TY_presence`)、ITの在不在(`IT_presence`)、群れ外オス数(`ntm_std`)、集団内の発情メス数(`est_std`)、集団内のメス数(`female_std`)、集団内の血縁メス数(`kin_est`)、調査期間(`study_period`)  
+- ランダム切片: `subject`  
+
+```{r}
+## 2019~2021年
+m_prox_an_F <- brm(log(mean_prox) ~ TY_presence + IT_presence + ntm_std + est_std + 
+                      female_std + kin_std  + study_period +  (1|subject) + (1|date),
+                    family = student,
+                    iter = 11000, warmup = 1000, seed = 123,
+                    prior = c(prior(student_t(4,0,5), class = "b"),
+                              prior(student_t(4,0,10), class = "Intercept"),
+                              prior(student_t(4,0,10), class = "sd"),
+                              prior(student_t(4,0,10), class = "nu"),
+                              prior(student_t(4,0,10), class = "sigma")),
+                    control = list(adapt_delta = 0.99, max_treedepth = 20),
+                    backend = "cmdstanr",
+                    data = prox_data_an_F,
+                    file = "model/m_prox_an_F.rds")
+
+## 2019~2020年
+prox_data_an_F_bf21 <- prox_data_an_F %>% 
+  filter(study_period != "m21") %>% 
+  mutate(ntm_std = standardize(no_ntm),
+         male_std = standardize(no_male),
+         est_std = standardize(no_est),
+         kin_std = standardize(no_kin),
+         female_std = standardize(no_female),
+         rate_agg_std = standardize(rate_agg_6yo),
+         CSI_TY_std = standardize(CSI_TY),
+         mean_prox = sum_prox/n)
+
+m_prox_an_F_bf21 <- brm(log(mean_prox) ~ TY_presence + IT_presence + ntm_std + est_std + 
+                       female_std + kin_std  + study_period + (1|subject),
+                                 family = student,
+                                 iter = 11000, warmup = 1000, seed = 123,
+                                 prior = c(prior(student_t(4,0,5), class = "b"),
+                                           prior(student_t(4,0,10), class = "Intercept"),
+                                           prior(student_t(4,0,10), class = "sd")),
+                                 control = list(adapt_delta = 0.99, max_treedepth = 20),
+                                 backend = "cmdstanr",
+                                 data = prox_data_an_F_bf21,
+                                 file = "model/m_prox_an_F_bf21.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
+```{r, fig.height = 4}
+## 全期間    
+dh_prox_an_F <- dh_check_brms(m_prox_an_F, quantreg = TRUE)
+
+## 21年より前
+dh_prox_an_F_bf21 <- dh_check_brms(m_prox_an_F_bf21, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_prox_an_F)
+
+## 21年より前
+check_collinearity(m_prox_an_F_bf21)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_prox_an_F, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+
+## 21年より前
+pp_check(m_prox_an_F_bf21, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_prox_an_F)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+
+data.frame(Rhat = brms::rhat(m_prox_an_F_bf21)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_prox_an_F <- summary(m_prox_an_F)
+
+model_parameters(m_prox_an_F,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,3,5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_prox_an_F$fixed$Bulk_ESS,
+         "Tail ESS" = summary_prox_an_F$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_presence1",
+                                 "b_IT_presence1",
+                                 "b_ntm_std","b_female_std",
+                                 "b_est_std", 
+                                 "b_kin_std", 
+                                 "b_study_periodm20","b_study_periodm21")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_study_periodm20" = "Study period (MS20 vs MS19)",
+                                                  "b_study_periodm21" = "Study period (MS21 vs MS19)",
+                                                  "^b_TY_presence1$" = "TY present? (Yes vs No)",
+                                                  "^b_IT_presence1$" = "IT present? (Yes vs No)",
+                                                  "b_ntm_std" = "No. of non-troop males on the day",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_prox_an_F
+
+table_prox_an_F
+
+write_csv(table_prox_an_F, "tables/table_prox_an_F.csv")
+```
+<br/>  
+
+続いて、2021年のデータを除いたモデルについて確認する。  
+```{r, echo = FALSE}
+summary_prox_an_F_bf21 <- summary(m_prox_an_F_bf21)
+
+model_parameters(m_prox_an_F_bf21,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,3,5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_prox_an_F_bf21$fixed$Bulk_ESS,
+         "Tail ESS" = summary_prox_an_F_bf21$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_presence1",
+                                 "b_IT_presence1",
+                                 "b_ntm_std","b_female_std",
+                                 "b_est_std", 
+                                 "b_kin_std", 
+                                 "b_study_periodm20")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_study_periodm20" = "Study period (MS20 vs MS19)",
+                                                  "b_study_periodm21" = "Study period (MS21 vs MS19)",
+                                                  "^b_TY_presence1$" = "TY present? (Yes vs No)",
+                                                  "^b_IT_presence1$" = "IT present? (Yes vs No)",
+                                                  "b_ntm_std" = "No. of non-troop males on the day",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_prox_an_F_bf21
+
+table_prox_an_F_bf21
+
+write_csv(table_prox_an_F_bf21, "tables/table_prox_an_F_bf21.csv")
+```
+<br/>  
+
+#### 結果の図示  
+最後に、結果の図示をします。  
+
+まず、TYの有無についてです。  
+```{r}
+emm_prox_an_F_TY <- emmeans(m_prox_an_F,
+                          ~TY_presence)
+
+prox_data_an_F %>% 
+  ggplot(aes(x = TY_presence, y = log(mean_prox))) +
+  geom_violin(bw = 0.1,
+              scale = "width") +
+  geom_boxplot(size = 0.5,
+               linewidth = 0.4,
+               width = 0.2,
+               fill = "grey",
+               outlier.alpha = 0) +
+  geom_point(data = emm_prox_an_F_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean),
+             size = 3,
+             color = "white") +
+  geom_errorbar(data = emm_prox_an_F_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean, ymin = lower.HPD,
+                 ymax = upper.HPD),
+             size = 0.4,
+             color = "white",
+             width = 0.1) +
+  geom_signif(comparisons = list(c("0", "1")),
+              y_position = 1.3,
+              annotations = "***") +
+  theme_bw(base_size = 12) +
+  scale_x_discrete(labels = c("*TY* absent", "*TY* present")) +
+  labs(x = "", y = "log(mean no. of females within 3m)") +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.text.x = element_markdown(),
+        aspect.ratio = 1) -> p_prox_an_F_TY
+
+p_prox_an_F_TY
+
+ggsave("figures/p_prox_an_F_TY.tif", p_prox_an_F_TY,
+       dpi = 2000, units = "mm",
+       width = 100, height = 100)
+```
+<br/>  
+
+続いて、ITについてです。  
+```{r}
+emm_prox_an_F_IT <- emmeans(m_prox_an_F_bf21,
+                             ~IT_presence)
+
+prox_data_an_F_bf21 %>% 
+  ggplot(aes(x = IT_presence, y = log(mean_prox))) +
+  geom_violin(bw = 0.07,
+              scale = "width") +
+  geom_boxplot(size = 0.5,
+               linewidth = 0.4,
+               width = 0.2,
+               fill = "grey",
+               outlier.alpha = 0) +
+  geom_point(data = emm_prox_an_F_IT %>% 
+               data.frame() %>% 
+               mutate(IT_presence = as.factor(IT_presence)),
+             aes(y = emmean),
+             size = 3,
+             color = "white") +
+  geom_errorbar(data = emm_prox_an_F_IT %>% 
+               data.frame() %>% 
+               mutate(IT_presence = as.factor(IT_presence)),
+             aes(y = emmean, ymin = lower.HPD,
+                 ymax = upper.HPD),
+             size = 0.4,
+             color = "white",
+             width = 0.1) +
+  theme_bw(base_size = 12) +
+  scale_x_discrete(labels = c("*IT* absent", "*IT* present")) +
+  labs(x = "", y = "log(mean resting group size)") +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.text.x = element_markdown(),
+        aspect.ratio = 1) -> p_prox_an_F_IT
+
+p_prox_an_F_IT
+
+ggsave("figures/p_prox_an_F_IT.tif", p_prox_an_F_IT,
+       dpi = 2000, units = "mm",
+       width = 100, height = 100)
+```
+<br/>  
+
+### 非交尾期   
+#### データの加工  
+続いて、非交尾期について分析を行うためのデータを作成します。連続変数は標準化します。  
+
+- 休息ポイント数が10以上の個体追跡セッションのみを使用   
+- ハドリングのポイントは除去   
+- 地上休息のみを含む  
+
+```{r}
+prox_data_nm_F <- focal_combined_prox_final %>% 
+  mutate(rate_female = no_female/max_female) %>%
+  filter(str_detect(study_period, "nm")) %>% 
+  replace_na(list(hud = 0)) %>% 
+  filter(hud != "1") %>% 
+  filter(activity == "F" & T_G == "G") %>% 
+  group_by(date, no_focal, subject, study_period, 
+           no_female, TY_presence,
+           no_kin, IT_presence) %>% 
+  summarise(sum_prox = sum(x3m_female + 1),
+            n = n()) %>% 
+  ungroup() %>% 
+  mutate(TY_presence = as.factor(TY_presence),
+         IT_presence = as.factor(IT_presence)) %>%
+  filter(study_period != "m18") %>% 
+  filter(n >= 10) %>% 
+  mutate(kin_std = standardize(no_kin),
+         female_std = standardize(no_female),
+         mean_prox = sum_prox/n)
+
+prox_data_nm_F
+```
+<br/>  
+
+共変量と応答変数(平均休息集団サイズ)の関連を図示すると以下のようになります。  
+```{r}
+prox_data_nm_F %>% 
+  pivot_longer(cols = c(no_female,  no_kin),
+               names_to = "type",
+               values_to = "value") %>% 
+  ggplot(aes(x = value, y = mean_prox)) +
+  geom_point(shape = 1) +
+  facet_rep_wrap(~ type,
+                 scales = "free") +
+  theme_bw(base_size = 12) +
+  theme(aspect.ratio = 1) +
+  labs(x = "", y = "Mean resting group size")
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。以下のように行いました。連続変数は標準化しています。また、`IT`の効果を見る際には、2021年交尾期を除くモデルを作成しました。  
+
+- 応答変数: log(平均休息集団サイズ(メスのみ))  
+- 分布: Studentのt分布  
+- 説明変数: TYの在不在(`TY_presence`)、ITの在不在(`IT_presence`)、群れ外オス数(`ntm_std`)、集団内の発情メス数(`est_std`)、集団内のメス数(`female_std`)、集団内の血縁メス数(`kin_est`)、調査期間(`study_period`)  
+- ランダム切片: `subject`  
+
+```{r}
+## 2019~2021年
+m_prox_nm_F <- brm(log(mean_prox) ~ TY_presence + kin_std + study_period + (1|subject),
+                                 family = student,
+                                 iter = 11000, warmup = 1000, seed = 195,
+                                 prior = c(prior(student_t(4,0,5), class = "b"),
+                                           prior(student_t(4,0,10), class = "Intercept"),
+                                           prior(student_t(4,0,10), class = "sd"),
+                                           prior(student_t(4,0,10), class = "nu"),
+                                           prior(student_t(4,0,10), class = "sigma")),
+                                 control = list(adapt_delta = 0.99, max_treedepth = 20),
+                                 backend = "cmdstanr",
+                                 data = prox_data_nm_F,
+                                 file = "model/m_prox_nm_F.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
+```{r, fig.height = 4}
+## 全期間    
+dh_prox_nm_F <- dh_check_brms(m_prox_nm_F, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_prox_nm_F)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_prox_nm_F, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_prox_nm_F)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_prox_nm_F <- summary(m_prox_nm_F)
+
+model_parameters(m_prox_nm_F,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,3,5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_prox_nm_F$fixed$Bulk_ESS,
+         "Tail ESS" = summary_prox_nm_F$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_presence1",
+                                 "b_kin_std", 
+                                 "b_study_periodnm21","b_study_periodnm22")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_study_periodnm21" = "Study period (NMS21 vs NMS19)",
+                                                  "b_study_periodnm22" = "Study period (NMS22 vs NMS19)",
+                                                  "^b_TY_presence1$" = "TY present? (Yes vs No)",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_prox_nm_F
+
+table_prox_nm_F
+
+write_csv(table_prox_nm_F, "tables/table_prox_nm_F.csv")
+```
+<br/>  
+
+#### 結果の図示  
+最後に、結果の図示をします。  
+
+まず、TYの有無についてです。  
+```{r}
+emm_prox_nm_F_TY <- emmeans(m_prox_nm_F,
+                          ~TY_presence)
+
+prox_data_nm_F %>% 
+  ggplot(aes(x = TY_presence, y = log(mean_prox))) +
+  geom_violin(bw = 0.2,
+              scale = "width") +
+  geom_boxplot(size = 0.5,
+               linewidth = 0.4,
+               width = 0.2,
+               fill = "grey",
+               outlier.alpha = 0) +
+  geom_point(data = emm_prox_nm_F_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean),
+             size = 3,
+             color = "white") +
+  geom_errorbar(data = emm_prox_nm_F_TY %>% 
+               data.frame() %>% 
+               mutate(TY_presence = as.factor(TY_presence)),
+             aes(y = emmean, ymin = lower.HPD,
+                 ymax = upper.HPD),
+             size = 0.4,
+             color = "white",
+             width = 0.1) +
+  theme_bw(base_size = 12) +
+  scale_x_discrete(labels = c("*TY* absent", "*TY* present")) +
+  labs(x = "", y = "log(mean resting group size)") +
+  theme(text = element_text(family = "Times New Roman"),
+        axis.text.x = element_markdown(),
+        aspect.ratio = 1) -> p_prox_nm_F_TY
+
+p_prox_nm_F_TY
+
+ggsave("figures/p_prox_nm_F_TY.tif", p_prox_nm_F_TY,
        dpi = 2000, units = "mm",
        width = 100, height = 100)
 ```

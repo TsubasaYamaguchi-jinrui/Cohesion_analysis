@@ -7,6 +7,7 @@ rmd_files:
   - 04_CSI_TY.Rmd  
   - 05_data_cleaning.Rmd  
   - 06_aggression_injury.Rmd
+  - 07_cohesion_analysis.Rmd
   - sessioninfo.Rmd
 output_dir: "docs"  
 language:

@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>実行環境 | Fission-fusion dynamics in B1 troop</title>
+  <meta name="description" content="実行環境 | Fission-fusion dynamics in B1 troop" />
+  <meta name="generator" content="bookdown 0.39 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="実行環境 | Fission-fusion dynamics in B1 troop" />
+  <meta property="og:type" content="book" />
+  
+  
+  
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="実行環境 | Fission-fusion dynamics in B1 troop" />
+  
+  
+  
+
+<meta name="author" content="Tsubasa Yamaguchi" />
+
+
+<meta name="date" content="2024-10-20" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="07_cohesion_analysis.html"/>
+
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/pagedtable-1.1/css/pagedtable.css" rel="stylesheet" />
+<script src="libs/pagedtable-1.1/js/pagedtable.js"></script>
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+<link href="libs/tabwid-1.1.3/tabwid.css" rel="stylesheet" />
+<script src="libs/tabwid-1.1.3/tabwid.js"></script>
+<link href="libs/htmltools-fill-0.5.8.1/fill.css" rel="stylesheet" />
+<script src="libs/htmlwidgets-1.6.4/htmlwidgets.js"></script>
+<link href="libs/datatables-css-0.0.0/datatables-crosstalk.css" rel="stylesheet" />
+<script src="libs/datatables-binding-0.33/datatables.js"></script>
+<link href="libs/dt-core-1.13.6/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="libs/dt-core-1.13.6/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="libs/dt-core-1.13.6/js/jquery.dataTables.min.js"></script>
+<link href="libs/nouislider-7.0.10/jquery.nouislider.min.css" rel="stylesheet" />
+<script src="libs/nouislider-7.0.10/jquery.nouislider.min.js"></script>
+<link href="libs/selectize-0.12.0/selectize.bootstrap3.css" rel="stylesheet" />
+<script src="libs/selectize-0.12.0/selectize.min.js"></script>
+<link href="libs/crosstalk-1.2.1/css/crosstalk.min.css" rel="stylesheet" />
+<script src="libs/crosstalk-1.2.1/js/crosstalk.min.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+<style type="text/css">
+/* Used with Pandoc 2.11+ new --citeproc when CSL is used */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+<link rel="stylesheet" href="custom_style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li class="chapter" data-level="" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i>本稿の目的</a></li>
+<li class="chapter" data-level="" data-path="01_library.html"><a href="01_library.html"><i class="fa fa-check"></i>0. パッケージの読み込み</a></li>
+<li class="chapter" data-level="1" data-path="02_Basicdata.html"><a href="02_Basicdata.html"><i class="fa fa-check"></i><b>1</b> データの読み込み</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="02_Basicdata.html"><a href="02_Basicdata.html#daily-data-の読み込み"><i class="fa fa-check"></i><b>1.1</b> Daily data の読み込み</a></li>
+<li class="chapter" data-level="1.2" data-path="02_Basicdata.html"><a href="02_Basicdata.html#個体追跡データの読み込み"><i class="fa fa-check"></i><b>1.2</b> 個体追跡データの読み込み</a></li>
+<li class="chapter" data-level="1.3" data-path="02_Basicdata.html"><a href="02_Basicdata.html#群れの詳細な出欠データを読み込む"><i class="fa fa-check"></i><b>1.3</b> 群れの詳細な出欠データを読み込む</a></li>
+<li class="chapter" data-level="1.4" data-path="02_Basicdata.html"><a href="02_Basicdata.html#オスの攻撃データを読み込む"><i class="fa fa-check"></i><b>1.4</b> オスの攻撃データを読み込む</a></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="03_CSI_female.html"><a href="03_CSI_female.html"><i class="fa fa-check"></i><b>2</b> メス同士のCSIの算出</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの定義"><i class="fa fa-check"></i><b>2.1</b> CSIの定義</a></li>
+<li class="chapter" data-level="2.2" data-path="03_CSI_female.html"><a href="03_CSI_female.html#データの加工"><i class="fa fa-check"></i><b>2.2</b> データの加工</a></li>
+<li class="chapter" data-level="2.3" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出全期間"><i class="fa fa-check"></i><b>2.3</b> CSIの算出(全期間)</a>
+<ul>
+<li class="chapter" data-level="2.3.1" data-path="03_CSI_female.html"><a href="03_CSI_female.html#毛づくろい時間割合の算出"><i class="fa fa-check"></i><b>2.3.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="2.3.2" data-path="03_CSI_female.html"><a href="03_CSI_female.html#近接時間割合の算出"><i class="fa fa-check"></i><b>2.3.2</b> 近接時間割合の算出</a></li>
+<li class="chapter" data-level="2.3.3" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出"><i class="fa fa-check"></i><b>2.3.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="2.4" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出2018交尾期2019交尾期"><i class="fa fa-check"></i><b>2.4</b> CSIの算出(2018交尾期～2019交尾期)</a>
+<ul>
+<li class="chapter" data-level="2.4.1" data-path="03_CSI_female.html"><a href="03_CSI_female.html#毛づくろい時間割合の算出-1"><i class="fa fa-check"></i><b>2.4.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="2.4.2" data-path="03_CSI_female.html"><a href="03_CSI_female.html#近接時間割合の算出-1"><i class="fa fa-check"></i><b>2.4.2</b> 近接時間割合の算出</a></li>
+<li class="chapter" data-level="2.4.3" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出-1"><i class="fa fa-check"></i><b>2.4.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="2.5" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出tam生存前まで"><i class="fa fa-check"></i><b>2.5</b> CSIの算出(Tam生存前まで)</a>
+<ul>
+<li class="chapter" data-level="2.5.1" data-path="03_CSI_female.html"><a href="03_CSI_female.html#毛づくろい時間割合の算出-2"><i class="fa fa-check"></i><b>2.5.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="2.5.2" data-path="03_CSI_female.html"><a href="03_CSI_female.html#近接時間割合の算出-2"><i class="fa fa-check"></i><b>2.5.2</b> 近接時間割合の算出</a></li>
+<li class="chapter" data-level="2.5.3" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出-2"><i class="fa fa-check"></i><b>2.5.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="2.6" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出調査期間ごと"><i class="fa fa-check"></i><b>2.6</b> CSIの算出(調査期間ごと)</a>
+<ul>
+<li class="chapter" data-level="2.6.1" data-path="03_CSI_female.html"><a href="03_CSI_female.html#毛づくろい時間割合の算出-3"><i class="fa fa-check"></i><b>2.6.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="2.6.2" data-path="03_CSI_female.html"><a href="03_CSI_female.html#近接時間割合の算出-3"><i class="fa fa-check"></i><b>2.6.2</b> 近接時間割合の算出</a></li>
+<li class="chapter" data-level="2.6.3" data-path="03_CSI_female.html"><a href="03_CSI_female.html#csiの算出-3"><i class="fa fa-check"></i><b>2.6.3</b> CSIの算出</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html"><i class="fa fa-check"></i><b>3</b> TY・ITとメスのCSIの計算</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの定義-1"><i class="fa fa-check"></i><b>3.1</b> CSIの定義</a></li>
+<li class="chapter" data-level="3.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#tyとメスのcsiの算出"><i class="fa fa-check"></i><b>3.2</b> TYとメスのCSIの算出</a>
+<ul>
+<li class="chapter" data-level="3.2.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#データの読み込みと加工"><i class="fa fa-check"></i><b>3.2.1</b> データの読み込みと加工</a></li>
+<li class="chapter" data-level="3.2.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出全調査期間"><i class="fa fa-check"></i><b>3.2.2</b> CSIの算出(全調査期間)</a>
+<ul>
+<li class="chapter" data-level="3.2.2.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-4"><i class="fa fa-check"></i><b>3.2.2.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.2.2.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合"><i class="fa fa-check"></i><b>3.2.2.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.2.2.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-4"><i class="fa fa-check"></i><b>3.2.2.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="3.2.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出2018交尾期2019交尾期-1"><i class="fa fa-check"></i><b>3.2.3</b> CSIの算出(2018交尾期～2019交尾期)</a>
+<ul>
+<li class="chapter" data-level="3.2.3.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-5"><i class="fa fa-check"></i><b>3.2.3.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.2.3.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合-1"><i class="fa fa-check"></i><b>3.2.3.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.2.3.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-5"><i class="fa fa-check"></i><b>3.2.3.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="3.2.4" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出非交尾期のみ"><i class="fa fa-check"></i><b>3.2.4</b> CSIの算出(非交尾期のみ)</a>
+<ul>
+<li class="chapter" data-level="3.2.4.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-6"><i class="fa fa-check"></i><b>3.2.4.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.2.4.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合-2"><i class="fa fa-check"></i><b>3.2.4.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.2.4.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-6"><i class="fa fa-check"></i><b>3.2.4.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="3.2.5" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出調査期間ごと-1"><i class="fa fa-check"></i><b>3.2.5</b> CSIの算出(調査期間ごと)</a>
+<ul>
+<li class="chapter" data-level="3.2.5.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-7"><i class="fa fa-check"></i><b>3.2.5.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.2.5.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合-3"><i class="fa fa-check"></i><b>3.2.5.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.2.5.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-7"><i class="fa fa-check"></i><b>3.2.5.3</b> CSIの算出</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="3.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#itとメスのcsiの算出"><i class="fa fa-check"></i><b>3.3</b> ITとメスのCSIの算出</a>
+<ul>
+<li class="chapter" data-level="3.3.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#データの読み込みと加工-1"><i class="fa fa-check"></i><b>3.3.1</b> データの読み込みと加工</a></li>
+<li class="chapter" data-level="3.3.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出全調査期間-1"><i class="fa fa-check"></i><b>3.3.2</b> CSIの算出(全調査期間)</a>
+<ul>
+<li class="chapter" data-level="3.3.2.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-8"><i class="fa fa-check"></i><b>3.3.2.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.3.2.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合-4"><i class="fa fa-check"></i><b>3.3.2.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.3.2.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-8"><i class="fa fa-check"></i><b>3.3.2.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="3.3.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出2018交尾期2019交尾期-2"><i class="fa fa-check"></i><b>3.3.3</b> CSIの算出(2018交尾期～2019交尾期)</a>
+<ul>
+<li class="chapter" data-level="3.3.3.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-9"><i class="fa fa-check"></i><b>3.3.3.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.3.3.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合-5"><i class="fa fa-check"></i><b>3.3.3.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.3.3.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-9"><i class="fa fa-check"></i><b>3.3.3.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="3.3.4" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出非交尾期のみ-1"><i class="fa fa-check"></i><b>3.3.4</b> CSIの算出(非交尾期のみ)</a>
+<ul>
+<li class="chapter" data-level="3.3.4.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-10"><i class="fa fa-check"></i><b>3.3.4.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.3.4.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合-6"><i class="fa fa-check"></i><b>3.3.4.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.3.4.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-10"><i class="fa fa-check"></i><b>3.3.4.3</b> CSIの算出</a></li>
+</ul></li>
+<li class="chapter" data-level="3.3.5" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出調査期間ごと-2"><i class="fa fa-check"></i><b>3.3.5</b> CSIの算出(調査期間ごと)</a>
+<ul>
+<li class="chapter" data-level="3.3.5.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#毛づくろい時間割合の算出-11"><i class="fa fa-check"></i><b>3.3.5.1</b> 毛づくろい時間割合の算出</a></li>
+<li class="chapter" data-level="3.3.5.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#近接時間割合-7"><i class="fa fa-check"></i><b>3.3.5.2</b> 近接時間割合</a></li>
+<li class="chapter" data-level="3.3.5.3" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-11"><i class="fa fa-check"></i><b>3.3.5.3</b> CSIの算出</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="3.4" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#分母をtyとit両方の頻度の平均値にする場合"><i class="fa fa-check"></i><b>3.4</b> 分母をTYとIT両方の頻度の平均値にする場合</a>
+<ul>
+<li class="chapter" data-level="3.4.1" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#csiの算出-12"><i class="fa fa-check"></i><b>3.4.1</b> CSIの算出</a></li>
+<li class="chapter" data-level="3.4.2" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#図示"><i class="fa fa-check"></i><b>3.4.2</b> 図示</a></li>
+</ul></li>
+<li class="chapter" data-level="3.5" data-path="04_CSI_TY.html"><a href="04_CSI_TY.html#算出に使用したメスの個体追跡データの概要"><i class="fa fa-check"></i><b>3.5</b> 算出に使用したメスの個体追跡データの概要</a></li>
+</ul></li>
+<li class="chapter" data-level="4" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html"><i class="fa fa-check"></i><b>4</b> 個体追跡データの加工</a>
+<ul>
+<li class="chapter" data-level="4.1" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html#必要なデータの読み込み"><i class="fa fa-check"></i><b>4.1</b> 必要なデータの読み込み</a></li>
+<li class="chapter" data-level="4.2" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html#データの加工-1"><i class="fa fa-check"></i><b>4.2</b> データの加工</a>
+<ul>
+<li class="chapter" data-level="4.2.1" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html#メスの情報"><i class="fa fa-check"></i><b>4.2.1</b> メスの情報</a></li>
+<li class="chapter" data-level="4.2.2" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html#オスの情報"><i class="fa fa-check"></i><b>4.2.2</b> オスの情報</a></li>
+<li class="chapter" data-level="4.2.3" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html#tyとitの確認状況"><i class="fa fa-check"></i><b>4.2.3</b> TYとITの確認状況</a></li>
+<li class="chapter" data-level="4.2.4" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html#フォーカルを攻撃したオスのid"><i class="fa fa-check"></i><b>4.2.4</b> フォーカルを攻撃したオスのID</a></li>
+<li class="chapter" data-level="4.2.5" data-path="05_data_cleaning.html"><a href="05_data_cleaning.html#フォーカルリスト"><i class="fa fa-check"></i><b>4.2.5</b> フォーカルリスト</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="5" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html"><i class="fa fa-check"></i><b>5</b> オスの攻撃と怪我の関連</a>
+<ul>
+<li class="chapter" data-level="5.1" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#データの加工-2"><i class="fa fa-check"></i><b>5.1</b> データの加工</a></li>
+<li class="chapter" data-level="5.2" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#分析"><i class="fa fa-check"></i><b>5.2</b> 分析</a>
+<ul>
+<li class="chapter" data-level="5.2.1" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#交尾期と非交尾期の比較"><i class="fa fa-check"></i><b>5.2.1</b> 交尾期と非交尾期の比較</a>
+<ul>
+<li class="chapter" data-level="5.2.1.1" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#モデリング"><i class="fa fa-check"></i><b>5.2.1.1</b> モデリング</a></li>
+<li class="chapter" data-level="5.2.1.2" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#モデルチェック"><i class="fa fa-check"></i><b>5.2.1.2</b> モデルチェック</a></li>
+<li class="chapter" data-level="5.2.1.3" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#結果の確認"><i class="fa fa-check"></i><b>5.2.1.3</b> 結果の確認</a></li>
+<li class="chapter" data-level="5.2.1.4" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#結果の図示"><i class="fa fa-check"></i><b>5.2.1.4</b> 結果の図示</a></li>
+</ul></li>
+<li class="chapter" data-level="5.2.2" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#被攻撃頻度と怪我の有無の関連"><i class="fa fa-check"></i><b>5.2.2</b> 被攻撃頻度と怪我の有無の関連</a>
+<ul>
+<li class="chapter" data-level="5.2.2.1" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#モデリング-1"><i class="fa fa-check"></i><b>5.2.2.1</b> モデリング</a></li>
+</ul></li>
+<li class="chapter" data-level="5.2.3" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#モデリング-2"><i class="fa fa-check"></i><b>5.2.3</b> モデリング</a>
+<ul>
+<li class="chapter" data-level="5.2.3.1" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#モデルチェック-1"><i class="fa fa-check"></i><b>5.2.3.1</b> モデルチェック</a></li>
+<li class="chapter" data-level="5.2.3.2" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#結果の確認-1"><i class="fa fa-check"></i><b>5.2.3.2</b> 結果の確認</a></li>
+<li class="chapter" data-level="5.2.3.3" data-path="06_aggression_injury.html"><a href="06_aggression_injury.html#結果の図示-1"><i class="fa fa-check"></i><b>5.2.3.3</b> 結果の図示</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="6" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html"><i class="fa fa-check"></i><b>6</b> 休息中の凝集性に影響する要因</a>
+<ul>
+<li class="chapter" data-level="6.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#データの加工-3"><i class="fa fa-check"></i><b>6.1</b> データの加工</a></li>
+<li class="chapter" data-level="6.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#休息集団サイズの分析"><i class="fa fa-check"></i><b>6.2</b> 休息集団サイズの分析</a>
+<ul>
+<li class="chapter" data-level="6.2.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#交尾期非発情メス"><i class="fa fa-check"></i><b>6.2.1</b> 交尾期(非発情メス)</a>
+<ul>
+<li class="chapter" data-level="6.2.1.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#データの加工-4"><i class="fa fa-check"></i><b>6.2.1.1</b> データの加工</a></li>
+<li class="chapter" data-level="6.2.1.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデリング-3"><i class="fa fa-check"></i><b>6.2.1.2</b> モデリング</a></li>
+<li class="chapter" data-level="6.2.1.3" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデルチェック-2"><i class="fa fa-check"></i><b>6.2.1.3</b> モデルチェック</a></li>
+<li class="chapter" data-level="6.2.1.4" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の確認-2"><i class="fa fa-check"></i><b>6.2.1.4</b> 結果の確認</a></li>
+<li class="chapter" data-level="6.2.1.5" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の図示-2"><i class="fa fa-check"></i><b>6.2.1.5</b> 結果の図示</a></li>
+</ul></li>
+<li class="chapter" data-level="6.2.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#非交尾期"><i class="fa fa-check"></i><b>6.2.2</b> 非交尾期</a>
+<ul>
+<li class="chapter" data-level="6.2.2.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#データの加工-5"><i class="fa fa-check"></i><b>6.2.2.1</b> データの加工</a></li>
+<li class="chapter" data-level="6.2.2.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデリング-4"><i class="fa fa-check"></i><b>6.2.2.2</b> モデリング</a></li>
+<li class="chapter" data-level="6.2.2.3" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデルチェック-3"><i class="fa fa-check"></i><b>6.2.2.3</b> モデルチェック</a></li>
+<li class="chapter" data-level="6.2.2.4" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の確認-3"><i class="fa fa-check"></i><b>6.2.2.4</b> 結果の確認</a></li>
+<li class="chapter" data-level="6.2.2.5" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の図示-3"><i class="fa fa-check"></i><b>6.2.2.5</b> 結果の図示</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="6.3" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#近接個体数の分析休息中"><i class="fa fa-check"></i><b>6.3</b> 近接個体数の分析(休息中)</a>
+<ul>
+<li class="chapter" data-level="6.3.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#交尾期非発情メス-1"><i class="fa fa-check"></i><b>6.3.1</b> 交尾期(非発情メス)</a>
+<ul>
+<li class="chapter" data-level="6.3.1.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#データの加工-6"><i class="fa fa-check"></i><b>6.3.1.1</b> データの加工</a></li>
+<li class="chapter" data-level="6.3.1.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデリング-5"><i class="fa fa-check"></i><b>6.3.1.2</b> モデリング</a></li>
+<li class="chapter" data-level="6.3.1.3" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデルチェック-4"><i class="fa fa-check"></i><b>6.3.1.3</b> モデルチェック</a></li>
+<li class="chapter" data-level="6.3.1.4" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の確認-4"><i class="fa fa-check"></i><b>6.3.1.4</b> 結果の確認</a></li>
+<li class="chapter" data-level="6.3.1.5" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の図示-4"><i class="fa fa-check"></i><b>6.3.1.5</b> 結果の図示</a></li>
+</ul></li>
+<li class="chapter" data-level="6.3.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#非交尾期-1"><i class="fa fa-check"></i><b>6.3.2</b> 非交尾期</a>
+<ul>
+<li class="chapter" data-level="6.3.2.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#データの加工-7"><i class="fa fa-check"></i><b>6.3.2.1</b> データの加工</a></li>
+<li class="chapter" data-level="6.3.2.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデリング-6"><i class="fa fa-check"></i><b>6.3.2.2</b> モデリング</a></li>
+<li class="chapter" data-level="6.3.2.3" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデルチェック-5"><i class="fa fa-check"></i><b>6.3.2.3</b> モデルチェック</a></li>
+<li class="chapter" data-level="6.3.2.4" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の確認-5"><i class="fa fa-check"></i><b>6.3.2.4</b> 結果の確認</a></li>
+<li class="chapter" data-level="6.3.2.5" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の図示-5"><i class="fa fa-check"></i><b>6.3.2.5</b> 結果の図示</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="6.4" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#近接個体数の分析採食中"><i class="fa fa-check"></i><b>6.4</b> 近接個体数の分析(採食中)</a>
+<ul>
+<li class="chapter" data-level="6.4.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#交尾期非発情メス-2"><i class="fa fa-check"></i><b>6.4.1</b> 交尾期(非発情メス)</a>
+<ul>
+<li class="chapter" data-level="6.4.1.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#データの加工-8"><i class="fa fa-check"></i><b>6.4.1.1</b> データの加工</a></li>
+<li class="chapter" data-level="6.4.1.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデリング-7"><i class="fa fa-check"></i><b>6.4.1.2</b> モデリング</a></li>
+<li class="chapter" data-level="6.4.1.3" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデルチェック-6"><i class="fa fa-check"></i><b>6.4.1.3</b> モデルチェック</a></li>
+<li class="chapter" data-level="6.4.1.4" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の確認-6"><i class="fa fa-check"></i><b>6.4.1.4</b> 結果の確認</a></li>
+<li class="chapter" data-level="6.4.1.5" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の図示-6"><i class="fa fa-check"></i><b>6.4.1.5</b> 結果の図示</a></li>
+</ul></li>
+<li class="chapter" data-level="6.4.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#非交尾期-2"><i class="fa fa-check"></i><b>6.4.2</b> 非交尾期</a>
+<ul>
+<li class="chapter" data-level="6.4.2.1" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#データの加工-9"><i class="fa fa-check"></i><b>6.4.2.1</b> データの加工</a></li>
+<li class="chapter" data-level="6.4.2.2" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデリング-8"><i class="fa fa-check"></i><b>6.4.2.2</b> モデリング</a></li>
+<li class="chapter" data-level="6.4.2.3" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#モデルチェック-7"><i class="fa fa-check"></i><b>6.4.2.3</b> モデルチェック</a></li>
+<li class="chapter" data-level="6.4.2.4" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の確認-7"><i class="fa fa-check"></i><b>6.4.2.4</b> 結果の確認</a></li>
+<li class="chapter" data-level="6.4.2.5" data-path="07_cohesion_analysis.html"><a href="07_cohesion_analysis.html#結果の図示-7"><i class="fa fa-check"></i><b>6.4.2.5</b> 結果の図示</a></li>
+</ul></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="" data-path="sessioninfo.html"><a href="sessioninfo.html"><i class="fa fa-check"></i>実行環境</a></li>
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">Fission-fusion dynamics in B1 troop</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="実行環境" class="section level1 unnumbered hasAnchor">
+<h1>実行環境<a href="sessioninfo.html#実行環境" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<div class="sourceCode" id="cb248"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb248-1"><a href="sessioninfo.html#cb248-1" tabindex="-1"></a><span class="fu">sessionInfo</span>()</span></code></pre></div>
+<pre><code>## R version 4.4.0 (2024-04-24 ucrt)
+## Platform: x86_64-w64-mingw32/x64
+## Running under: Windows 11 x64 (build 22631)
+## 
+## Matrix products: default
+## 
+## 
+## locale:
+## [1] LC_COLLATE=Japanese_Japan.utf8  LC_CTYPE=Japanese_Japan.utf8   
+## [3] LC_MONETARY=Japanese_Japan.utf8 LC_NUMERIC=C                   
+## [5] LC_TIME=Japanese_Japan.utf8    
+## 
+## time zone: Asia/Tokyo
+## tzcode source: internal
+## 
+## attached base packages:
+## [1] parallel  stats     graphics  grDevices utils     datasets  methods  
+## [8] base     
+## 
+## other attached packages:
+##  [1] systemfonts_1.1.0         extrafont_0.19           
+##  [3] ggpattern_1.1.1           ggh4x_0.2.8              
+##  [5] ggsignif_0.6.4            lemon_0.4.9              
+##  [7] ggsci_3.2.0               kableExtra_1.4.0         
+##  [9] patchwork_1.2.0           ggrepel_0.9.6            
+## [11] flextable_0.9.6           GGally_2.2.1             
+## [13] ggnewscale_0.4.10         viridis_0.6.5            
+## [15] viridisLite_0.4.2         bayesplot_1.11.1         
+## [17] plotly_4.10.4             ggbeeswarm_0.7.2         
+## [19] ggforce_0.4.2             ggtext_0.1.2             
+## [21] ggraph_2.2.1              tidygraph_1.3.1          
+## [23] igraph_2.0.3              vegan_2.6-6.1            
+## [25] lattice_0.22-6            permute_0.9-7            
+## [27] aninet_0.2.0.0            asnipe_1.1.17            
+## [29] ANTs_0.0.16               sna_2.7-2                
+## [31] network_1.18.2            statnet.common_4.9.0     
+## [33] DHARMa.helpers_0.0.0.9000 DHARMa_0.4.6             
+## [35] ggeffects_1.6.0           cmdstanr_0.8.0           
+## [37] rstanarm_2.32.1           rstan_2.32.6             
+## [39] StanHeaders_2.32.8        rethinking_2.13.2        
+## [41] brms_2.21.0               Rcpp_1.0.12              
+## [43] emmeans_1.10.2            scales_1.3.0             
+## [45] DT_0.33                   see_0.8.4                
+## [47] report_0.5.8              parameters_0.22.0        
+## [49] performance_0.12.0        modelbased_0.8.8         
+## [51] insight_0.20.1            effectsize_0.8.9         
+## [53] datawizard_0.11.0         correlation_0.8.5        
+## [55] bayestestR_0.13.2         easystats_0.7.2          
+## [57] knitr_1.48                readxl_1.4.3             
+## [59] lubridate_1.9.3           forcats_1.0.0            
+## [61] stringr_1.5.1             dplyr_1.1.4              
+## [63] purrr_1.0.2               readr_2.1.5              
+## [65] tidyr_1.3.1               tibble_3.2.1             
+## [67] ggplot2_3.5.1             tidyverse_2.0.0          
+## 
+## loaded via a namespace (and not attached):
+##   [1] matrixStats_1.3.0       doParallel_1.0.17       httr_1.4.7             
+##   [4] RColorBrewer_1.1-3      numDeriv_2016.8-1.1     tools_4.4.0            
+##   [7] backports_1.5.0         sjlabelled_1.2.0        utf8_1.2.4             
+##  [10] R6_2.5.1                lazyeval_0.2.2          mgcv_1.9-1             
+##  [13] withr_3.0.1             Brobdingnag_1.2-9       gridExtra_2.3          
+##  [16] archive_1.1.8           cli_3.6.2               textshaping_0.4.0      
+##  [19] shinyjs_2.1.0           officer_0.6.6           sandwich_3.1-0         
+##  [22] labeling_0.4.3          sass_0.4.9              mvtnorm_1.2-5          
+##  [25] askpass_1.2.0           QuickJSR_1.1.3          commonmark_1.9.2       
+##  [28] gfonts_0.2.0            svglite_2.1.3           rstudioapi_0.16.0      
+##  [31] httpcode_0.3.0          generics_0.1.3          shape_1.4.6.1          
+##  [34] vroom_1.6.5             gtools_3.9.5            crosstalk_1.2.1        
+##  [37] distributional_0.4.0    zip_2.3.1               inline_0.3.19          
+##  [40] loo_2.7.0               Matrix_1.7-0            fansi_1.0.6            
+##  [43] abind_1.4-8             lifecycle_1.0.4         multcomp_1.4-25        
+##  [46] yaml_2.3.8              snakecase_0.11.1        grid_4.4.0             
+##  [49] qgam_1.3.4              promises_1.3.0          crayon_1.5.2           
+##  [52] miniUI_0.1.1.1          haven_2.5.4             pillar_1.9.0           
+##  [55] boot_1.3-30             estimability_1.5.1      shinystan_2.6.0        
+##  [58] codetools_0.2-20        glue_1.7.0              V8_4.4.2               
+##  [61] fontLiberation_0.1.0    data.table_1.15.4       Rdpack_2.6             
+##  [64] vctrs_0.6.5             cellranger_1.1.0        gtable_0.3.5           
+##  [67] cachem_1.1.0            xfun_0.44               rbibutils_2.2.16       
+##  [70] mime_0.12               coda_0.19-4.1           survival_3.6-4         
+##  [73] Kendall_2.2.1           iterators_1.0.14        shinythemes_1.2.0      
+##  [76] TH.data_1.1-2           gap_1.5-3               nlme_3.1-164           
+##  [79] xts_0.13.2              bit64_4.0.5             fontquiver_0.2.1       
+##  [82] threejs_0.3.3           tensorA_0.36.2.1        TMB_1.9.11             
+##  [85] bslib_0.7.0             vipor_0.4.7             colorspace_2.1-0       
+##  [88] tidyselect_1.2.1        processx_3.8.4          bit_4.0.5              
+##  [91] extrafontdb_1.0         compiler_4.4.0          curl_5.2.1             
+##  [94] xml2_1.3.6              fontBitstreamVera_0.1.1 colourpicker_1.3.0     
+##  [97] posterior_1.5.0         bookdown_0.39           checkmate_2.3.1        
+## [100] dygraphs_1.1.1.6        digest_0.6.35           minqa_1.2.7            
+## [103] rmarkdown_2.27          htmltools_0.5.8.1       pkgconfig_2.0.3        
+## [106] base64enc_0.1-3         lme4_1.1-35.3           highr_0.11             
+## [109] fastmap_1.2.0           rlang_1.1.3             htmlwidgets_1.6.4      
+## [112] shiny_1.8.1.1           farver_2.1.2            jquerylib_0.1.4        
+## [115] zoo_1.8-12              jsonlite_1.8.8          magrittr_2.0.3         
+## [118] munsell_0.5.1           gdtools_0.3.7           stringi_1.8.4          
+## [121] MASS_7.3-60.2           plyr_1.8.9              pkgbuild_1.4.4         
+## [124] ggstats_0.6.0           graphlayouts_1.1.1      splines_4.4.0          
+## [127] gridtext_0.1.5          hms_1.1.3               ps_1.7.6               
+## [130] uuid_1.2-0              markdown_1.13           reshape2_1.4.4         
+## [133] stats4_4.4.0            rstantools_2.4.0        crul_1.4.2             
+## [136] evaluate_1.0.0          RcppParallel_5.1.7      foreach_1.5.2          
+## [139] nloptr_2.0.3            tzdb_0.4.0              tweenr_2.0.3           
+## [142] httpuv_1.6.15           Rttf2pt1_1.3.12         openssl_2.2.0          
+## [145] polyclip_1.10-6         gap.datasets_0.0.6      xtable_1.8-4           
+## [148] later_1.3.2             ragg_1.3.2              glmmTMB_1.1.9          
+## [151] memoise_2.0.1           beeswarm_0.4.0          cluster_2.1.6          
+## [154] timechange_0.3.0        bridgesampling_1.1-2</code></pre>
+<p><strong>References</strong></p>
+
+<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div class="csl-entry">
+Chang, W. (2018). <em><span>R</span> graphics cookbook: Practical recipes for visualizing data</em>. <span>“O’Reilly Media, Inc.”</span>
+</div>
+<div class="csl-entry">
+Gabry, J., &amp; Mahr, T. (2022). <em>Bayesplot: Plotting for bayesian models.</em> <a href="https://mc-stan.org/bayesplot">https://mc-stan.org/bayesplot</a>
+</div>
+<div class="csl-entry">
+Hartig, F. (2022). <em>DHARMa: Residual diagnostics for hierarchical (multi-level / mixed) regression models</em>. <a href="https://CRAN.R-project.org/package=DHARMa">https://CRAN.R-project.org/package=DHARMa</a>
+</div>
+<div class="csl-entry">
+Rodríguez-Sánchez, F. (2023). <em>DHARMa.helpers: Helper functions to check models not (yet) directly supported by DHARMa</em>.
+</div>
+<div class="csl-entry">
+Wickham, H., &amp; Grolemund, G. (2016). <em><span>R</span> for data science: Import, tidy, transform, visualize, and model data</em>. <span>“O’Reilly Media, Inc.”</span>
+</div>
+<div class="csl-entry">
+Yamaguchi, T., &amp; Kazahari, N. (2022). Fission–fusion dynamics in a wild group of japanese macaques (macaca fuscata) on kinkazan island caused by the repeated separation of an alpha male being followed by females. <em>Primates</em>, <em>63</em>(6), 575–582.
+</div>
+<div class="csl-entry">
+松村優哉., 湯谷啓明., 紀ノ定保礼., &amp; 前田和. (2021). <em>RユーザのためのRstudio[実践]入門 tidyverseによるモダンな分析フローの世界 改訂2版</em>. 技術評論社.
+</div>
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="07_cohesion_analysis.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+"sharing": {
+"github": false,
+"facebook": true,
+"twitter": true,
+"linkedin": false,
+"weibo": false,
+"instapaper": false,
+"vk": false,
+"whatsapp": false,
+"all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+},
+"fontsettings": {
+"theme": "white",
+"family": "sans",
+"size": 2
+},
+"edit": {
+"link": null,
+"text": null
+},
+"history": {
+"link": null,
+"text": null
+},
+"view": {
+"link": null,
+"text": null
+},
+"download": null,
+"search": {
+"engine": "fuse",
+"options": null
+},
+"toc": {
+"collapse": "subsection"
+}
+});
+});
+</script>
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    var src = "true";
+    if (src === "" || src === "true") src = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.9/latest.js?config=TeX-MML-AM_CHTML";
+    if (location.protocol !== "file:")
+      if (/^https?:/.test(src))
+        src = src.replace(/^https?:/, '');
+    script.src = src;
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+</body>
+
+</html>

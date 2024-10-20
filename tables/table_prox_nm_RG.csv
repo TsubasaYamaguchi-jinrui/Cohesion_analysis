@@ -1,0 +1,6 @@
+Explanatory variables,Median,95%CI,PD (%),Rhat,Bulk ESS,Tail ESS
+Intercept,0.48,"[0.06, 0.90]",98.72,1.00,41159.38,29738.67
+TY present? (Yes vs No),0.20,"[-0.20, 0.60]",83.97,1.00,48373.53,31023.94
+No. of kin individuals on the day,0.06,"[-0.04, 0.17]",88.90,1.00,19656.71,21742.43
+Study period (NMS21 vs NMS19),0.11,"[-0.06, 0.29]",89.72,1.00,36360.39,28286.49
+Study period (NMS22 vs NMS19),-0.00,"[-0.15, 0.14]",52.35,1.00,37505.15,29457.29
