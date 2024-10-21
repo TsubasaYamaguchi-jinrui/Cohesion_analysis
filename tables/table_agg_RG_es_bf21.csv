@@ -1,0 +1,10 @@
+Explanatory variables,Component,CI,95%CI,PD (%),Rhat,Bulk ESS,Tail ESS
+Intercept,conditional,0.95,"[-29.30, -7.67]",100.00,1.00,8132.50,8096.02
+TY within RG? (Yes vs No),conditional,0.95,"[-49.81, 0.04]",97.44,1.00,17148.20,10715.05
+IT within RG? (Yes vs No),conditional,0.95,"[-4.22, 4.56]",53.42,1.00,19565.42,12829.58
+KR within RG? (Yes vs No),conditional,0.95,"[-1.89, 2.61]",62.94,1.00,31654.60,23136.97
+TY present during focal? (Yes vs No),conditional,0.95,"[-0.50, 14.72]",95.93,1.00,11197.22,8676.26
+IT present during focal? (Yes vs No),conditional,0.95,"[-6.42, 4.12]",61.59,1.00,13936.39,10411.88
+No. of females within RG,conditional,0.95,"[-38.78, -1.06]",99.31,1.00,16187.74,9373.08
+No. of females on the day,conditional,0.95,"[-4.29, 0.32]",95.26,1.00,13130.32,9727.64
+No. of estrous females on the day,conditional,0.95,"[-1.59, 2.73]",61.50,1.00,15302.37,11321.57

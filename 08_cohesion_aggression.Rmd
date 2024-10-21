@@ -1197,11 +1197,11 @@ summary_agg_RG_es_bf21 <- summary(m_agg_RG_es_bf21)
 
 model_parameters(m_agg_RG_es_bf21,  ci = 0.95,
                  centrality = "median", ci_method = "eti") %>% 
-  filter(Parameter != "sigma") %>% 
+  filter(Parameter != "phi") %>% 
   data.frame() %>%
   dplyr::select(1,2, 4, 5,6, 7,8) %>% 
-  mutate("Bulk ESS" = summary_agg_RG_es$fixed$Bulk_ESS,
-         "Tail ESS" = summary_agg_RG_es$fixed$Tail_ESS) %>% 
+  mutate("Bulk ESS" = summary_agg_RG_es_bf21$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_RG_es_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
   dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 

@@ -8,11 +8,11 @@
 - 非発情メスのものと発情メスのものは区別    
 - 交尾期と非交尾期は区別   
 
-
+### 交尾期  
 ```{r}
 ## 非発情メス 
 focal_combined_prox_final %>% 
-  filter(RG == "1") %>% 
+  filter(RG == "1" & T_G == "G") %>% 
   filter(rs2 == "0") %>% 
   filter((study_period == "m18" & ID %in% c(adult18,"TY","IT","LK","KR"))|(study_period == "m19" & ID %in% c(adult19,"TY","IT","LK","KR"))|(study_period == "m20" & ID %in% c(adult20,"TY","IT","KR"))|(study_period == "m21" & ID %in% c(adult21,"TY","KR","KM"))) %>% 
   select(date, no_focal, time, subject, ID) %>% 
