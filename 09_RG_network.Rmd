@@ -12,12 +12,10 @@
 - メスは2019年時点で6歳以上の個体のみを含みます。  
 - オスは`TY`、`IT`、`KR`のみを含みます。  
 
-
 ```{r}
-focal_RG_an <- focal_prox %>% 
+focal_RG <- focal_prox %>% 
   left_join(female_all %>% select(femaleID, date, rs2),
-            by = c("subject" = "femaleID")) %>% 
-  filter(rs2 == 0) %>% 
+            by = c("subject" = "femaleID", "date")) %>% 
   filter(RG == "1" & T_G == "G") %>% 
   mutate(focalID = str_c(study_period, "_", no_focal)) %>% 
   filter((study_period == "m18" & ID %in% c(adult18, "TY", "IT", "KR"))|
@@ -35,6 +33,26 @@ focal_RG_an <- focal_prox %>%
   pivot_wider(names_from = ID,
               values_from = presence) 
 ```
+
+## 隣接行列の作成  
+交尾期は年によって追跡個体が異なるため、追跡個体のみに絞って隣接行列を作成します。途中で死亡している個体は除外します。    
+
+- 2018年、2019年: `Mik`, `Kil`, `Tam`, `Koh`, `Aka`, `Ntr`, `Ten`, `Tot`, `Hen`, `Hot`, `Mei`, `Ako`, `Kol`, `Mal`, `Kit`, `Kun`, `Mif`  
+
+- 2020年、2021年
+
+```{r}
+
+```
+
+
+
+### 交尾期(非発情メス)  
+### TYがいる日のみ  
+```{r}
+
+```
+
 
 ## ネットワーク分析    
 各年の群れオスと6歳以上のメスでネットワークを作成する。  

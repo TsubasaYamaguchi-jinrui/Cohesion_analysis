@@ -596,21 +596,6 @@ m_cohesion_nm <- brm(log(mean_RG) ~ TY_presence + kin_std  + study_period + (1|s
                                  data = cohesion_data_nm,
                                  file = "model/m_cohesion_nm.rds")
 
-## 切断モデル  
-m_cohesion_nm_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + 
-                       kin_std  + study_period + (1|subject),
-                                 family = student,
-                                 iter = 7000, warmup = 2000, seed = 123,
-                                 prior = c(prior(student_t(4,0,5), class = "b"),
-                                           prior(student_t(4,0,10), class = "Intercept"),
-                                           prior(student_t(4,0,10), class = "sd"),
-                                           prior(student_t(4,0,10), class = "nu"),
-                                           prior(student_t(4,0,10), class = "sigma")),
-                                 control = list(adapt_delta = 0.99, max_treedepth = 20),
-                                 backend = "cmdstanr",
-                                 data = cohesion_data_nm,
-                                 file = "model/m_cohesion_nm.rds")
-
 ## 2019~2020年
 cohesion_data_nm_bf21 <- cohesion_data_nm %>% 
   filter(study_period != "m22") %>% 
@@ -628,19 +613,6 @@ m_cohesion_nm_bf21 <- brm(log(mean_RG) ~ TY_presence + kin_std  + study_period +
                                  backend = "cmdstanr",
                                  data = cohesion_data_nm_bf21,
                                  file = "model/m_cohesion_nm_bf21.rds")
-
-## 切断モデル  
-m_cohesion_nm_bf21_trunc <- brm(log(mean_RG)|trunc(lb = 0) ~ TY_presence + IT_presence + ntm_std + est_std + 
-                                  female_std + kin_std  + study_period + (1|subject),
-                                family = student,
-                                iter = 11000, warmup = 1000, seed = 123,
-                                prior = c(prior(student_t(4,0,5), class = "b"),
-                                          prior(student_t(4,0,10), class = "Intercept"),
-                                          prior(student_t(4,0,10), class = "sd")),
-                                control = list(adapt_delta = 0.99, max_treedepth = 20),
-                                backend = "cmdstanr",
-                                data = cohesion_data_nm_bf21,
-                                file = "model/m_cohesion_nm_bf21.rds")
 ```
 
 #### モデルチェック  
