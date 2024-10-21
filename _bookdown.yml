@@ -8,6 +8,7 @@ rmd_files:
   - 05_data_cleaning.Rmd  
   - 06_aggression_injury.Rmd
   - 07_cohesion_analysis.Rmd
+  - 08_cohesion_aggression.Rmd  
   - sessioninfo.Rmd
 output_dir: "docs"  
 language:

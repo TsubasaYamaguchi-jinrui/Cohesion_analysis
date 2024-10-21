@@ -1,0 +1,1177 @@
+# TYとの近接と被攻撃との関連  
+ここでは、交尾期においてTYやITとの近接がオスからの被攻撃頻度に及ぼす影響を調べていきます。  
+
+## TY/ITとの近接と被攻撃頻度の関連  
+まずは、休息集団内にTYとITがいるか否かによって、メスの被攻撃頻度が変わるかを検討します。  
+
+### 非発情メス  
+非発情メスについての分析を行います。    
+
+#### データの加工  
+分析のためのデータを作成します。データの独立性を担保するため、3分ごとのデータを用います。そのほかは以下の通りです。  
+
+- 地上にいるデータのみを用いる  
+- 連続変数は標準化  
+
+```{r}
+## 地上のデータ、交尾期のデータを抽出  
+focal_agg_prox_an <- focal_combined_prox_final %>% 
+  filter(rs2 == 0) %>% 
+  filter(T_G == "G") %>% 
+  filter(time %% 3 == 0) %>% 
+  filter(!str_detect(study_period, "nm")) %>% 
+  mutate(focalID = str_c(study_period, "_", no_focal)) %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         x3m_female_std = standardize(x3m_female)) 
+
+focal_agg_prox_an
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。調査期間は多重共線性が大きくなるため除外しました。    
+
+- 応答変数: 直後1分間の攻撃の有無(`agg_focal`)  
+- 説明変数: 3m以内のメス数(`x3m_female`)、3m以内のオスの有無(`TY_3m`, `IT_3m`, `KR_3m`)、調査日の確認メス数(`female_std`)、調査日の発情メス数(`est_std`)、追跡中のTYとITの有無(`TY_presence`、`IT_presence`)  
+- ランダム切片: メスID(`subject`)、追跡セッションID(`focalID`)  
+- 分布: ベルヌーイ分布  
+
+```{r}
+## 全期間  
+m_agg_prox_an <- brm(agg_focal ~ x3m_female_std + TY_3m + IT_3m + KR_3m +
+                         female_std + est_std + TY_presence + IT_presence + 
+                         (1|focalID) + (1|subject),
+                       family = bernoulli,
+                       iter = 11000, warmup = 1000, seed = 13,
+                       prior = c(prior(student_t(4,0,15), class = "b"),
+                                 prior(student_t(4,0,15), class = "Intercept"),
+                                 prior(student_t(4,0,10), class = "sd")),
+                       control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                       backend = "cmdstanr",
+                       data = focal_agg_prox_an,
+                       file = "model/m_agg_prox_an.rds")
+
+## 2020年交尾期以前  
+focal_agg_prox_an_bf21 <- focal_agg_prox_an %>% 
+  filter(study_period != "m21") %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         x3m_female_std = standardize(x3m_female)) 
+
+m_agg_prox_an_bf21 <- brm(agg_focal ~ x3m_female_std + TY_3m + IT_3m + KR_3m +
+                         female_std + est_std + TY_presence + IT_presence + 
+                         (1|focalID) + (1|subject),
+                       family = bernoulli,
+                       iter = 11000, warmup = 1000, seed = 13,
+                       prior = c(prior(student_t(4,0,15), class = "b"),
+                                 prior(student_t(4,0,15), class = "Intercept"),
+                                 prior(student_t(4,0,10), class = "sd")),
+                       control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                       backend = "cmdstanr",
+                       data = focal_agg_prox_an_bf21,
+                       file = "model/m_agg_prox_an_bf21.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
+```{r, fig.height = 4}
+## 全期間    
+dh_agg_prox_an <- dh_check_brms(m_agg_prox_an, quantreg = TRUE)
+
+## 21年より前
+dh_agg_prox_an_bf21 <- dh_check_brms(m_agg_prox_an_bf21, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_agg_prox_an)
+
+## 21年より前
+check_collinearity(m_agg_prox_an_bf21)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_agg_prox_an, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+
+## 21年より前
+pp_check(m_agg_prox_an_bf21, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_agg_prox_an)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+
+data.frame(Rhat = brms::rhat(m_agg_prox_an_bf21)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+最後に、残差の時系列相関を調べます。まずは全期間についてです。有意な時系列相関はないようです。    
+```{r}
+## 全時間ポイントの作成  
+focal_agg_prox_an_full <-  focal_agg_prox_an %>% 
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_prox_an$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_prox_an_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_prox_an_full2 <- focal_agg_prox_an_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_prox_an <- recalculateResiduals(dh_agg_prox_an, group = focal_agg_prox_an$time)
+
+testTemporalAutocorrelation(recal_agg_prox_an, time = unique(focal_agg_prox_an$time))
+```
+<br/>  
+
+2021年交尾期を除いた場合も同じです。  
+```{r}
+## 全時間ポイントの作成  
+focal_agg_prox_an_bf21_full <-  focal_agg_prox_an_bf21%>% 
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_prox_an_bf21$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_prox_an_bf21_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_prox_an_bf21_full2 <- focal_agg_prox_an_bf21_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_prox_an_bf21 <- recalculateResiduals(dh_agg_prox_an_bf21, group = focal_agg_prox_an$time)
+
+testTemporalAutocorrelation(recal_agg_prox_an_bf21, time = unique(focal_agg_prox_an$time))
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_agg_prox_an <- summary(m_agg_prox_an)
+
+model_parameters(m_agg_prox_an,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_prox_an$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_prox_an$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_3m","b_IT_3m","b_KR_3m",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_x3m_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_TY_3m" = "TY within 3m? (Yes vs No)",
+                                                  "b_IT_3m" = "IT within 3m? (Yes vs No)",
+                                                  "b_KR_3m" = "KR within 3m? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_x3m_female_std" = "No. of females within 3m",
+                                                  "b_ntm_std" = "No. of non-troop males on the day",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_prox_an
+
+table_agg_prox_an
+
+write_csv(table_agg_prox_an, "tables/table_agg_prox_an.csv")
+```
+<br/>  
+
+続いて、2021年のデータを除いたモデルについて確認する。  
+```{r, echo = FALSE}
+summary_agg_prox_an_bf21 <- summary(m_agg_prox_an_bf21)
+
+model_parameters(m_agg_prox_an_bf21,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_prox_an$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_prox_an$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_3m","b_IT_3m","b_KR_3m",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_x3m_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_TY_3m" = "TY within 3m? (Yes vs No)",
+                                                  "b_IT_3m" = "IT within 3m? (Yes vs No)",
+                                                  "b_KR_3m" = "KR within 3m? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_x3m_female_std" = "No. of females within 3m",
+                                                  "b_ntm_std" = "No. of non-troop males on the day",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_prox_an_bf21
+
+table_agg_prox_an_bf21
+
+write_csv(table_agg_prox_an_bf21, "tables/table_agg_prox_an_bf21.csv")
+```
+<br/>  
+
+### 発情メス  
+発情メスについての分析を行います。    
+
+#### データの加工  
+分析のためのデータを作成します。データの独立性を担保するため、3分ごとのデータを用います。そのほかは以下の通りです。  
+
+- 地上にいるデータのみを用いる  
+- 連続変数は標準化  
+
+```{r}
+## 地上のデータ、交尾期のデータを抽出  
+focal_agg_prox_es <- focal_combined_prox_final %>% 
+  filter(rs2 == 1) %>% 
+  filter(T_G == "G") %>% 
+  filter(time %% 3 == 0) %>% 
+  filter(!str_detect(study_period, "nm")) %>% 
+  mutate(focalID = str_c(study_period, "_", no_focal)) %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         x3m_female_std = standardize(x3m_female)) 
+
+focal_agg_prox_es
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。調査期間は多重共線性が大きくなるため除外しました。    
+
+- 応答変数: 直後1分間の攻撃の有無(`agg_focal`)  
+- 説明変数: 3m以内のメス数(`x3m_female`)、3m以内のオスの有無(`TY_3m`, `IT_3m`, `KR_3m`)、調査日の確認メス数(`female_std`)、調査日の発情メス数(`est_std`)、追跡中のTYとITの有無(`TY_presence`、`IT_presence`)  
+- ランダム切片: メスID(`subject`)、追跡セッションID(`focalID`)  
+- 分布: ベルヌーイ分布(21年を除いたものはベータ二項分布)      
+
+```{r}
+## 全期間  
+m_agg_prox_es <- brm(agg_focal ~ x3m_female_std + TY_3m + IT_3m + KR_3m +
+                         female_std + est_std + TY_presence + IT_presence + 
+                         (1|focalID) + (1|subject),
+                       family = bernoulli,
+                       iter = 11000, warmup = 1000, seed = 13,
+                       prior = c(prior(student_t(4,0,15), class = "b"),
+                                 prior(student_t(4,0,15), class = "Intercept"),
+                                 prior(student_t(4,0,10), class = "sd")),
+                       control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                       backend = "cmdstanr",
+                       data = focal_agg_prox_es,
+                       file = "model/m_agg_prox_es.rds")
+
+## 2020年交尾期以前  
+focal_agg_prox_es_bf21 <- focal_agg_prox_es %>% 
+  filter(study_period != "m21") %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         x3m_female_std = standardize(x3m_female)) %>% 
+  mutate(rowid = 1:n())
+
+## divergent transitionが少し出る  
+m_agg_prox_es_bf21 <- brm(agg_focal|trials(1) ~ x3m_female_std + TY_3m + IT_3m + KR_3m +
+                            female_std + est_std + TY_presence + IT_presence + 
+                            (1|focalID) + (1|subject),
+                          family = beta_binomial(),
+                          iter = 11000, warmup = 1000, seed = 1106,
+                          prior = c(prior(student_t(4,0,15), class = "b"),
+                                    prior(student_t(4,0,15), class = "Intercept"),
+                                    prior(student_t(4,0,10), class = "sd")),
+                          control=list(adapt_delta = 0.99999, max_treedepth = 20),
+                          backend = "cmdstanr",
+                          data = focal_agg_prox_es_bf21,
+                          file = "model/m_agg_prox_es_bf21.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。21年を除いた場合に少し悪そう。  
+```{r, fig.height = 4}
+## 全期間    
+dh_agg_prox_es <- dh_check_brms(m_agg_prox_es, quantreg = TRUE)
+
+## 21年より前
+dh_agg_prox_es_bf21 <- dh_check_brms(m_agg_prox_es_bf21, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_agg_prox_es)
+
+## 21年より前
+check_collinearity(m_agg_prox_es_bf21)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_agg_prox_es, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+
+## 21年より前
+pp_check(m_agg_prox_es_bf21, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_agg_prox_es)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+
+data.frame(Rhat = brms::rhat(m_agg_prox_es_bf21)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+最後に、残差の時系列相関を調べます。まずは全期間についてです。有意な時系列相関はないようです。    
+```{r}
+## 全時間ポイントの作成  
+focal_agg_prox_es_full <-  focal_agg_prox_es %>% 
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_prox_es$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_prox_es_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_prox_es_full2 <- focal_agg_prox_es_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_prox_es <- recalculateResiduals(dh_agg_prox_es, group = focal_agg_prox_es$time)
+
+testTemporalAutocorrelation(recal_agg_prox_es, time = unique(focal_agg_prox_es$time))
+```
+<br/>  
+
+2021年交尾期を除いた場合も同じです。  
+```{r}
+## 全時間ポイントの作成  
+focal_agg_prox_es_bf21_full <-  focal_agg_prox_es_bf21 %>% 
+  mutate(resid = dh_agg_prox_es_bf21$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_prox_es_bf21_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_prox_es_bf21_full2 <- focal_agg_prox_es_bf21_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_prox_es_bf21 <- recalculateResiduals(dh_agg_prox_es_bf21, group = focal_agg_prox_es_bf21$time)
+
+testTemporalAutocorrelation(recal_agg_prox_es_bf21, time = unique(focal_agg_prox_es_bf21$time))
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_agg_prox_es <- summary(m_agg_prox_es)
+
+model_parameters(m_agg_prox_es,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_prox_es$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_prox_es$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_3m","b_IT_3m","b_KR_3m",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_x3m_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_TY_3m" = "TY within 3m? (Yes vs No)",
+                                                  "b_IT_3m" = "IT within 3m? (Yes vs No)",
+                                                  "b_KR_3m" = "KR within 3m? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_x3m_female_std" = "No. of females within 3m",
+                                                  "b_ntm_std" = "No. of non-troop males on the day",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_prox_es
+
+table_agg_prox_es
+
+write_csv(table_agg_prox_es, "tables/table_agg_prox_es.csv")
+```
+<br/>  
+
+続いて、2021年のデータを除いたモデルについて確認する。  
+```{r, echo = FALSE}
+summary_agg_prox_es_bf21 <- summary(m_agg_prox_es_bf21)
+
+model_parameters(m_agg_prox_es_bf21,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_prox_es$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_prox_es$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_TY_3m","b_IT_3m","b_KR_3m",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_x3m_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_TY_3m" = "TY within 3m? (Yes vs No)",
+                                                  "b_IT_3m" = "IT within 3m? (Yes vs No)",
+                                                  "b_KR_3m" = "KR within 3m? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_x3m_female_std" = "No. of females within 3m",
+                                                  "b_ntm_std" = "No. of non-troop males on the day",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_prox_es_bf21
+
+table_agg_prox_es_bf21
+
+write_csv(table_agg_prox_es_bf21, "tables/table_agg_prox_es_bf21.csv")
+```
+<br/>  
+
+## 休息集団内のオスの有無と被攻撃頻度  
+### 非発情メス  
+非発情メスについての分析を行います。    
+
+#### データの加工  
+分析のためのデータを作成します。データの独立性を担保するため、3分ごとのデータを用います。そのほかは以下の通りです。  
+
+- 地上にいるデータのみを用いる  
+- 連続変数は標準化  
+
+```{r}
+## 地上のデータ、交尾期のデータを抽出  
+focal_agg_RG_an <- focal_combined_prox_final %>% 
+  filter(rs2 == 0) %>% 
+  filter(RG == 1 & T_G == "G") %>% 
+  filter(time %% 3 == 0) %>% 
+  filter(!str_detect(study_period, "nm")) %>% 
+  mutate(focalID = str_c(study_period, "_", no_focal)) %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         RG_female_std = standardize(RG_female)) 
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。調査期間は多重共線性が大きくなるため除外しました。    
+
+- 応答変数: 直後1分間の攻撃の有無(`agg_focal`)  
+- 説明変数: 3m以内のメス数(`x3m_female`)、3m以内のオスの有無(`TY_3m`, `IT_3m`, `KR_3m`)、調査日の確認メス数(`female_std`)、調査日の発情メス数(`est_std`)、追跡中のTYとITの有無(`TY_presence`、`IT_presence`)  
+- ランダム切片: メスID(`subject`)、追跡セッションID(`focalID`)  
+- 分布: ベルヌーイ分布  
+
+```{r}
+## 全期間  
+m_agg_RG_an <- brm(agg_focal ~ RG_female_std + RG_TY + RG_IT + RG_KR +
+                         female_std + est_std + TY_presence + IT_presence + 
+                         (1|focalID) + (1|subject),
+                       family = bernoulli,
+                       iter = 11000, warmup = 1000, seed = 13,
+                       prior = c(prior(student_t(4,0,15), class = "b"),
+                                 prior(student_t(4,0,15), class = "Intercept"),
+                                 prior(student_t(4,0,10), class = "sd")),
+                       control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                       backend = "cmdstanr",
+                       data = focal_agg_RG_an,
+                       file = "model/m_agg_RG_an.rds")
+
+## 2020年交尾期以前  
+focal_agg_RG_an_bf21 <- focal_agg_RG_an %>% 
+  filter(study_period != "m21") %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         RG_female_std = standardize(RG_female)) 
+
+m_agg_RG_an_bf21 <- brm(agg_focal ~ RG_female_std + RG_TY + RG_IT + RG_KR +
+                         female_std + est_std + TY_presence + IT_presence + 
+                         (1|focalID) + (1|subject),
+                       family = bernoulli,
+                       iter = 11000, warmup = 1000, seed = 13,
+                       prior = c(prior(student_t(4,0,15), class = "b"),
+                                 prior(student_t(4,0,15), class = "Intercept"),
+                                 prior(student_t(4,0,10), class = "sd")),
+                       control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                       backend = "cmdstanr",
+                       data = focal_agg_RG_an_bf21,
+                       file = "model/m_agg_RG_an_bf21.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
+```{r, fig.height = 4}
+## 全期間    
+dh_agg_RG_an <- dh_check_brms(m_agg_RG_an, quantreg = TRUE)
+
+## 21年より前
+dh_agg_RG_an_bf21 <- dh_check_brms(m_agg_RG_an_bf21, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_agg_RG_an)
+
+## 21年より前
+check_collinearity(m_agg_RG_an_bf21)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_agg_RG_an, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+
+## 21年より前
+pp_check(m_agg_RG_an_bf21, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_agg_RG_an)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+
+data.frame(Rhat = brms::rhat(m_agg_RG_an_bf21)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+最後に、残差の時系列相関を調べます。まずは全期間についてです。有意な時系列相関はないようです。    
+```{r}
+## 全時間ポイントの作成  
+focal_agg_RG_an_full <-  focal_agg_RG_an%>% 
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_RG_an$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_RG_an_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_RG_an_full2 <- focal_agg_RG_an_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_RG_an <- recalculateResiduals(dh_agg_RG_an, group = focal_agg_RG_an$time)
+
+testTemporalAutocorrelation(recal_agg_RG_an, time = unique(focal_agg_RG_an$time))
+```
+<br/>  
+
+2021年交尾期を除いた場合も同じです。  
+```{r}
+## 全時間ポイントの作成  
+focal_agg_RG_an_bf21_full <-  focal_agg_RG_an_bf21 %>% 
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_RG_an_bf21$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_RG_an_bf21_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_RG_an_bf21_full2 <- focal_agg_RG_an_bf21_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_RG_an_bf21 <- recalculateResiduals(dh_agg_RG_an_bf21, group = focal_agg_RG_an_bf21$time)
+
+testTemporalAutocorrelation(recal_agg_RG_an_bf21, time = unique(focal_agg_RG_an_bf21$time))
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_agg_RG_an <- summary(m_agg_RG_an)
+
+model_parameters(m_agg_RG_an,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_RG_an$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_RG_an$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_RG_TY","b_RG_IT","b_RG_KR",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_RG_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_RG_TY" = "TY within RG? (Yes vs No)",
+                                                  "b_RG_IT" = "IT within RG? (Yes vs No)",
+                                                  "b_RG_KR" = "KR within RG? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_RG_female_std" = "No. of females within RG",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_RG_an
+
+table_agg_RG_an
+
+write_csv(table_agg_RG_an, "tables/table_agg_RG_an.csv")
+```
+<br/>  
+
+続いて、2021年のデータを除いたモデルについて確認する。  
+```{r, echo = FALSE}
+summary_agg_RG_an_bf21 <- summary(m_agg_RG_an_bf21)
+
+model_parameters(m_agg_RG_an_bf21,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_RG_an$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_RG_an$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_RG_TY","b_RG_IT","b_RG_KR",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_RG_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_RG_TY" = "TY within RG? (Yes vs No)",
+                                                  "b_RG_IT" = "IT within RG? (Yes vs No)",
+                                                  "b_RG_KR" = "KR within RG? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_RG_female_std" = "No. of females within RG",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_RG_an_bf21
+
+table_agg_RG_an_bf21
+
+write_csv(table_agg_RG_an_bf21, "tables/table_agg_RG_an_bf21.csv")
+```
+<br/>  
+
+### 発情メス  
+発情メスについての分析を行います。    
+
+#### データの加工  
+分析のためのデータを作成します。データの独立性を担保するため、3分ごとのデータを用います。そのほかは以下の通りです。  
+
+- 地上にいるデータのみを用いる  
+- 連続変数は標準化  
+
+```{r}
+## 地上のデータ、交尾期のデータを抽出  
+focal_agg_RG_es <- focal_combined_prox_final %>% 
+  filter(rs2 == 1) %>% 
+  filter(RG == 1 & T_G == "G") %>% 
+  filter(time %% 3 == 0) %>% 
+  filter(!str_detect(study_period, "nm")) %>% 
+  mutate(focalID = str_c(study_period, "_", no_focal)) %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         RG_female_std = standardize(RG_female)) 
+```
+<br/>  
+
+#### モデリング  
+それでは、モデリングを行います。調査期間は多重共線性が大きくなるため除外しました。    
+
+- 応答変数: 直後1分間の攻撃の有無(`agg_focal`)  
+- 説明変数: 3m以内のメス数(`x3m_female`)、3m以内のオスの有無(`TY_3m`, `IT_3m`, `KR_3m`)、調査日の確認メス数(`female_std`)、調査日の発情メス数(`est_std`)、追跡中のTYとITの有無(`TY_presence`、`IT_presence`)  
+- ランダム切片: メスID(`subject`)、追跡セッションID(`focalID`)  
+- 分布: ベルヌーイ分布(21年を除いたものはベータ二項分布)    
+
+```{r}
+## 全期間  
+m_agg_RG_es <- brm(agg_focal ~ RG_female_std + RG_TY + RG_IT + RG_KR +
+                         female_std + est_std + TY_presence + IT_presence + 
+                         (1|focalID) + (1|subject),
+                       family = bernoulli,
+                       iter = 11000, warmup = 1000, seed = 13,
+                       prior = c(prior(student_t(4,0,15), class = "b"),
+                                 prior(student_t(4,0,15), class = "Intercept"),
+                                 prior(student_t(4,0,10), class = "sd")),
+                       control=list(adapt_delta = 0.9999, max_treedepth = 20),
+                       backend = "cmdstanr",
+                       data = focal_agg_RG_es,
+                       file = "model/m_agg_RG_es.rds")
+
+## 2020年交尾期以前  
+focal_agg_RG_es_bf21 <- focal_agg_RG_es %>% 
+  filter(study_period != "m21") %>% 
+  mutate(CSI_TY_std = standardize(CSI_TY),
+         CSI_IT_std = standardize(CSI_IT),
+         ntm_std = standardize(no_ntm),
+         est_std = standardize(no_est),
+         female_std = standardize(no_female),
+         RG_female_std = standardize(RG_female)) %>% 
+  mutate(rowid = 1:n())
+
+m_agg_RG_es_bf21 <- brm(agg_focal|trials(1) ~ RG_female_std + RG_TY + RG_IT + RG_KR +
+                         female_std + est_std + TY_presence + IT_presence + 
+                         (1|focalID) + (1|subject),
+                       family = binomial(),
+                       iter = 11000, warmup = 1000, seed = 123,
+                       prior = c(prior(student_t(4,0,15), class = "b"),
+                                 prior(student_t(4,0,15), class = "Intercept"),
+                                 prior(student_t(4,0,10), class = "sd")),
+                       control=list(adapt_delta = 0.99999, max_treedepth = 20),
+                       backend = "cmdstanr",
+                       data = focal_agg_RG_es_bf21,
+                       file = "model/m_agg_RG_es_bf21.rds")
+```
+
+#### モデルチェック  
+まず、DHARMaパッケージ[@Hartig2022]とDHARMa.helperパッケージ[@Francisco2023]でモデルの前提が満たされているかを確認します。
+```{r, fig.height = 4}
+## 全期間    
+dh_agg_RG_es <- dh_check_brms(m_agg_RG_es, quantreg = TRUE)
+
+## 21年より前
+dh_agg_RG_es_bf21 <- dh_check_brms(m_agg_RG_es_bf21, quantreg = TRUE)
+```
+<br/>  
+
+多重共線性の問題もありません。  
+```{r}
+## 全期間   
+check_collinearity(m_agg_RG_es)
+
+## 21年より前
+check_collinearity(m_agg_RG_es_bf21)
+```
+
+bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布からの予測分布と実測値の分布を比較しても大きな乖離はない。   
+```{r, fig.height = 4.5}
+## 全期間    
+pp_check(m_agg_RG_es, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+
+## 21年より前
+pp_check(m_agg_RG_es_bf21, ndraws = 100)+
+  theme_bw()+
+  theme(aspect.ratio = 0.9)
+```  
+<br/>  
+
+Rhatにも問題はなく、収束の問題はないよう。  
+```{r, fig.dim = c(8,4)}
+data.frame(Rhat = brms::rhat(m_agg_RG_es)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+
+data.frame(Rhat = brms::rhat(m_agg_RG_es_bf21)) %>% 
+  ggplot(aes(x = Rhat))+
+  geom_histogram(fill = "white",
+                 color = "black")+
+  theme_bw()+
+  theme(aspect.ratio = 1)
+```
+<br/>  
+
+最後に、残差の時系列相関を調べます。まずは全期間についてです。有意な時系列相関はないようです。    
+```{r}
+## 全時間ポイントの作成  
+focal_agg_RG_es_full <-  focal_agg_RG_es%>% 
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_RG_es$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_RG_es_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_RG_es_full2 <- focal_agg_RG_es_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_RG_es <- recalculateResiduals(dh_agg_RG_es, group = focal_agg_RG_es$time)
+
+testTemporalAutocorrelation(recal_agg_RG_es, time = unique(focal_agg_RG_es$time))
+```
+<br/>  
+
+2021年交尾期を除いた場合も同じです。  
+```{r}
+## 全時間ポイントの作成  
+focal_agg_RG_es_bf21_full <-  focal_agg_RG_es_bf21 %>% 
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_RG_es_bf21$scaledResiduals) %>% 
+  group_by(focalID, subject, date) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  ungroup()
+
+## 日ごとに個体追跡セッション番号を作成  
+date_focal_list <- focal_agg_RG_es_bf21_full %>% 
+  distinct(date, focalID) %>% 
+  group_by(date) %>% 
+  mutate(dateID = 1:n()) %>% 
+  ungroup() 
+
+focal_agg_RG_es_bf21_full2 <- focal_agg_RG_es_bf21_full %>% 
+  left_join(date_focal_list) %>% 
+  ## 時刻を作成
+  ## 2018年はかぶらないように作成  
+  group_by(focalID) %>% 
+  mutate(start_time = case_when(
+    study_period == "m18" ~ make_datetime(year(date), month(date), mday(date),
+                                          hour = unique(dateID*3), min = 0, sec = 0),
+    .default = start_time
+  )) %>% 
+  ungroup() %>% 
+  mutate(actualtime = start_time + time) %>% 
+  group_by(focalID) %>% 
+  complete(time = full_seq(time, 1)) %>% 
+  filter(time %% 3 == 0)
+  
+recal_agg_RG_es_bf21 <- recalculateResiduals(dh_agg_RG_es_bf21, group = focal_agg_RG_es_bf21$time)
+
+testTemporalAutocorrelation(recal_agg_RG_es_bf21, time = unique(focal_agg_RG_es_bf21$time))
+```
+<br/>  
+
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+```{r, echo = FALSE}
+summary_agg_RG_es <- summary(m_agg_RG_es)
+
+model_parameters(m_agg_RG_es,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_RG_es$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_RG_es$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_RG_TY","b_RG_IT","b_RG_KR",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_RG_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_RG_TY" = "TY within RG? (Yes vs No)",
+                                                  "b_RG_IT" = "IT within RG? (Yes vs No)",
+                                                  "b_RG_KR" = "KR within RG? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_RG_female_std" = "No. of females within RG",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_RG_es
+
+table_agg_RG_es
+
+write_csv(table_agg_RG_es, "tables/table_agg_RG_es.csv")
+```
+<br/>  
+
+続いて、2021年のデータを除いたモデルについて確認する。  
+```{r, echo = FALSE}
+summary_agg_RG_es_bf21 <- summary(m_agg_RG_es_bf21)
+
+model_parameters(m_agg_RG_es_bf21,  ci = 0.95,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "sigma") %>% 
+  data.frame() %>%
+  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_RG_es$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_RG_es$fixed$Tail_ESS) %>% 
+  mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
+  dplyr::select(-CI_low, -CI_high) %>% 
+  mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
+  rename(`PD (%)` = pd) %>% 
+  mutate(Parameter = fct_relevel(Parameter,
+                                 "b_Intercept","b_RG_TY","b_RG_IT","b_RG_KR",
+                                 "b_TY_presence",
+                                 "b_IT_presence",
+                                 "b_RG_female_std",
+                                 "b_female_std",
+                                 "b_est_std")) %>% 
+  arrange(Parameter) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_RG_TY" = "TY within RG? (Yes vs No)",
+                                                  "b_RG_IT" = "IT within RG? (Yes vs No)",
+                                                  "b_RG_KR" = "KR within RG? (Yes vs No)",
+                                                  "^b_TY_presence$" = "TY present during focal? (Yes vs No)",
+                                                  "^b_IT_presence$" = "IT present during focal? (Yes vs No)",
+                                                  "b_RG_female_std" = "No. of females within RG",
+                                                  "b_female_std" = "No. of females on the day",
+                                                  "b_est_std" = "No. of estrous females on the day",
+                                                  "b_kin_std" = "No. of kin individuals on the day"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_agg_RG_es_bf21
+
+table_agg_RG_es_bf21
+
+write_csv(table_agg_RG_es_bf21, "tables/table_agg_RG_es_bf21.csv")
+```
+<br/>  
+

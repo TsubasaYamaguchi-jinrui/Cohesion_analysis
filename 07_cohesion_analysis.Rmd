@@ -186,9 +186,7 @@ focal_combined_prox_c %>%
 
 作成したデータは以下の通り。  
 ```{r}
-datatable(focal_combined_prox_final,
-          options = list(scrollX = 80),
-          filter = list(position = "top"))
+focal_combined_prox_final
 ```
 
 ## 休息集団サイズの分析   
