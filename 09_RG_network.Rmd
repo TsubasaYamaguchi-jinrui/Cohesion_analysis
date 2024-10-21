@@ -2,37 +2,73 @@
 休息集団のネットワークを書くことで、TYが休息集団内でどのような位置を占めていたのかを明らかにします。    
 
 ## データの加工   
-まず、休息集団の隣接行列を作成します。  
+まず、休息集団の隣接行列を作成するためのデータを作成します。    
+各個体が休息集団にいたかを表すgroup by individual 形式のデータを作成します。  
 
-- 地上休息中のみを抽出   
+- 地上休息中のみを抽出    
 - 非発情メスのものと発情メスのものは区別    
-- 交尾期と非交尾期は区別   
+- 交尾期と非交尾期は区別    
+- *IT*がいた時期に絞ったネットワークも作成します。   
+- メスは2019年時点で6歳以上の個体のみを含みます。  
+- オスは`TY`、`IT`、`KR`のみを含みます。  
 
-### 交尾期  
+
 ```{r}
-## 非発情メス 
-focal_combined_prox_final %>% 
+focal_RG_an <- focal_prox %>% 
+  left_join(female_all %>% select(femaleID, date, rs2),
+            by = c("subject" = "femaleID")) %>% 
+  filter(rs2 == 0) %>% 
   filter(RG == "1" & T_G == "G") %>% 
-  filter(rs2 == "0") %>% 
-  filter((study_period == "m18" & ID %in% c(adult18,"TY","IT","LK","KR"))|(study_period == "m19" & ID %in% c(adult19,"TY","IT","LK","KR"))|(study_period == "m20" & ID %in% c(adult20,"TY","IT","KR"))|(study_period == "m21" & ID %in% c(adult21,"TY","KR","KM"))) %>% 
-  select(date, no_focal, time, subject, ID) %>% 
-  filter(time %% 5 == 0) %>% 
-  mutate(presence = 1) -> RGmember 
-  
-## Group by individual形式に直す  
-RGmember %>% 
-  tidyr::expand(nesting(date,no_focal,subject,time), ID) %>% 
-  left_join(RGmember, by = c("date","no_focal","subject","time","ID")) %>% 
-  mutate(presence = ifelse(subject == ID, 1,presence)) %>% 
+  mutate(focalID = str_c(study_period, "_", no_focal)) %>% 
+  filter((study_period == "m18" & ID %in% c(adult18, "TY", "IT", "KR"))|
+            (study_period == "nm19" & ID %in% c(adult18, "TY", "IT", "KR"))|
+            (study_period == "m19" & ID %in% c(adult19, "TY", "IT", "KR"))|
+            (study_period == "m20" & ID %in% c(adult20, "TY", "IT", "KR"))|
+            (study_period == "nm21" & ID %in% c(adult20, "TY", "IT", "KR"))|
+            (study_period == "m21" & ID %in% c(adult21, "TY", "IT", "KR"))|
+            (study_period == "nm22" & ID %in% c(adult21, "TY", "IT", "KR"))) %>% 
+  select(date, study_period, focalID, time, TY_presence, IT_presence, subject, ID) %>% 
+  mutate(presence = 1) %>% 
+  complete(nesting(date, study_period, focalID, time, TY_presence, IT_presence, subject), ID = ID) %>% 
+  mutate(presence = if_else(subject == ID, 1, presence)) %>% 
   replace_na(list(presence = 0)) %>% 
-  pivot_wider(names_from = ID, values_from = presence) %>% 
-  left_join(focal_raw_fin %>% select(no_focal,time, subject,rs2,TY,IT) %>% rename(TYpre = TY, ITpre = IT),
-            by = c("no_focal","subject","time")) %>% 
-  filter(rs2 == "0") -> RG_gbi
+  pivot_wider(names_from = ID,
+              values_from = presence) 
 ```
 
 ## ネットワーク分析    
 各年の群れオスと6歳以上のメスでネットワークを作成する。  
+
+```{r}
+female_list <- c("Mik", "Kil", "Tam", "Koh", "Aka", "Ntr", "Ten", "Hen", 
+                 "Hot", "Mei", "Ako", "Kol", "Mal", "Kit", "Kun", "Mif")
+
+focal_RG %>% 
+  select(1:6, one_of(female_list), TY, IT, KR) -> a
+
+b <- a %>% filter(TY_presence == 1) %>% filter(!str_detect(study_period, "nmm"))
+c <- a %>% filter(TY_presence == 0) %>% filter(!str_detect(study_period, "nmm"))
+
+matRG <- get_network(a %>% select(-(1:6)),
+                          data_format = "GBI",
+                          association_index = "SRI")
+
+
+matRG2 <- get_network(c %>% select(-(1:6)),
+                          data_format = "GBI",
+                          association_index = "SRI")
+
+met.eigen(matRG)
+
+focal_RG %>% 
+  group_by(study_period, subject) %>% 
+  summarise(n = n()) -> z
+```
+
+```{r}
+
+```
+
 
 ### 2018年  
 
@@ -46,6 +82,8 @@ RG_gbi %>%
 matRG_2018 <- get_network(gbi_2018,
                           data_format = "GBI",
                           association_index = "HWI")
+
+met.eigen(matRG)
 ```
 
 隣接行列は以下の通り。  
