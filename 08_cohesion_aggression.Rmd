@@ -136,10 +136,7 @@ data.frame(Rhat = brms::rhat(m_agg_prox_an_bf21)) %>%
 ## 全時間ポイントの作成  
 focal_agg_prox_an_full <-  focal_agg_prox_an %>% 
   drop_na(agg_focal) %>% 
-  mutate(resid = dh_agg_prox_an$scaledResiduals) %>% 
-  group_by(focalID, subject, date) %>% 
-  complete(time = full_seq(time, 1)) %>% 
-  ungroup()
+  mutate(resid = dh_agg_prox_an$scaledResiduals) 
 
 ## 日ごとに個体追跡セッション番号を作成  
 date_focal_list <- focal_agg_prox_an_full %>% 
@@ -147,6 +144,15 @@ date_focal_list <- focal_agg_prox_an_full %>%
   group_by(date) %>% 
   mutate(dateID = 1:n()) %>% 
   ungroup() 
+
+## フォーカル間に入れる空白行  
+time_blank_agg_prox_an <- focal_agg_prox_an_full %>% 
+  group_by(focalID, date, subject) %>% 
+  summarise(time = max(time) + 1) %>% 
+  group_by(focalID, date, subject) %>% 
+  complete(time = seq(time, time + 30, by = 3)) %>% 
+  ungroup() %>% 
+  mutate(resid = NA)
 
 focal_agg_prox_an_full2 <- focal_agg_prox_an_full %>% 
   left_join(date_focal_list) %>% 
@@ -162,23 +168,24 @@ focal_agg_prox_an_full2 <- focal_agg_prox_an_full %>%
   mutate(actualtime = start_time + time) %>% 
   group_by(focalID) %>% 
   complete(time = full_seq(time, 1)) %>% 
-  filter(time %% 3 == 0)
-  
-recal_agg_prox_an <- recalculateResiduals(dh_agg_prox_an, group = focal_agg_prox_an$time)
+  filter(time %% 3 == 0) %>% 
+  full_join(time_blank_agg_prox_an) %>% 
+  arrange(focalID, time)
 
-testTemporalAutocorrelation(recal_agg_prox_an, time = unique(focal_agg_prox_an$time))
+## 自己相関の図示  
+acf(focal_agg_prox_an_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_prox_an_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
 2021年交尾期を除いた場合も同じです。  
 ```{r}
 ## 全時間ポイントの作成  
-focal_agg_prox_an_bf21_full <-  focal_agg_prox_an_bf21%>% 
+focal_agg_prox_an_bf21_full <-  focal_agg_prox_an_bf21 %>% 
   drop_na(agg_focal) %>% 
-  mutate(resid = dh_agg_prox_an_bf21$scaledResiduals) %>% 
-  group_by(focalID, subject, date) %>% 
-  complete(time = full_seq(time, 1)) %>% 
-  ungroup()
+  mutate(resid = dh_agg_prox_an_bf21$scaledResiduals) 
 
 ## 日ごとに個体追跡セッション番号を作成  
 date_focal_list <- focal_agg_prox_an_bf21_full %>% 
@@ -186,6 +193,15 @@ date_focal_list <- focal_agg_prox_an_bf21_full %>%
   group_by(date) %>% 
   mutate(dateID = 1:n()) %>% 
   ungroup() 
+
+## フォーカル間に入れる空白行  
+time_blank_agg_prox_an_bf21 <- focal_agg_prox_an_bf21_full %>% 
+  group_by(focalID, date, subject) %>% 
+  summarise(time = max(time) + 1) %>% 
+  group_by(focalID, date, subject) %>% 
+  complete(time = seq(time, time + 30, by = 3)) %>% 
+  ungroup() %>% 
+  mutate(resid = NA)
 
 focal_agg_prox_an_bf21_full2 <- focal_agg_prox_an_bf21_full %>% 
   left_join(date_focal_list) %>% 
@@ -201,11 +217,15 @@ focal_agg_prox_an_bf21_full2 <- focal_agg_prox_an_bf21_full %>%
   mutate(actualtime = start_time + time) %>% 
   group_by(focalID) %>% 
   complete(time = full_seq(time, 1)) %>% 
-  filter(time %% 3 == 0)
-  
-recal_agg_prox_an_bf21 <- recalculateResiduals(dh_agg_prox_an_bf21, group = focal_agg_prox_an$time)
+  filter(time %% 3 == 0) %>% 
+  full_join(time_blank_agg_prox_an_bf21) %>% 
+  arrange(focalID, time)
 
-testTemporalAutocorrelation(recal_agg_prox_an_bf21, time = unique(focal_agg_prox_an$time))
+## 自己相関の図示  
+acf(focal_agg_prox_an_bf21_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_prox_an_bf21_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
@@ -432,10 +452,7 @@ data.frame(Rhat = brms::rhat(m_agg_prox_es_bf21)) %>%
 ## 全時間ポイントの作成  
 focal_agg_prox_es_full <-  focal_agg_prox_es %>% 
   drop_na(agg_focal) %>% 
-  mutate(resid = dh_agg_prox_es$scaledResiduals) %>% 
-  group_by(focalID, subject, date) %>% 
-  complete(time = full_seq(time, 1)) %>% 
-  ungroup()
+  mutate(resid = dh_agg_prox_es$scaledResiduals) 
 
 ## 日ごとに個体追跡セッション番号を作成  
 date_focal_list <- focal_agg_prox_es_full %>% 
@@ -443,6 +460,15 @@ date_focal_list <- focal_agg_prox_es_full %>%
   group_by(date) %>% 
   mutate(dateID = 1:n()) %>% 
   ungroup() 
+
+## フォーカル間に入れる空白行  
+time_blank_agg_prox_es <- focal_agg_prox_es_full %>% 
+  group_by(focalID, date, subject) %>% 
+  summarise(time = max(time) + 1) %>% 
+  group_by(focalID, date, subject) %>% 
+  complete(time = seq(time, time + 30, by = 3)) %>% 
+  ungroup() %>% 
+  mutate(resid = NA)
 
 focal_agg_prox_es_full2 <- focal_agg_prox_es_full %>% 
   left_join(date_focal_list) %>% 
@@ -458,11 +484,15 @@ focal_agg_prox_es_full2 <- focal_agg_prox_es_full %>%
   mutate(actualtime = start_time + time) %>% 
   group_by(focalID) %>% 
   complete(time = full_seq(time, 1)) %>% 
-  filter(time %% 3 == 0)
-  
-recal_agg_prox_es <- recalculateResiduals(dh_agg_prox_es, group = focal_agg_prox_es$time)
+  filter(time %% 3 == 0) %>% 
+  full_join(time_blank_agg_prox_es) %>% 
+  arrange(focalID, time)
 
-testTemporalAutocorrelation(recal_agg_prox_es, time = unique(focal_agg_prox_es$time))
+## 自己相関の図示  
+acf(focal_agg_prox_es_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_prox_es_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
@@ -470,10 +500,8 @@ testTemporalAutocorrelation(recal_agg_prox_es, time = unique(focal_agg_prox_es$t
 ```{r}
 ## 全時間ポイントの作成  
 focal_agg_prox_es_bf21_full <-  focal_agg_prox_es_bf21 %>% 
-  mutate(resid = dh_agg_prox_es_bf21$scaledResiduals) %>% 
-  group_by(focalID, subject, date) %>% 
-  complete(time = full_seq(time, 1)) %>% 
-  ungroup()
+  drop_na(agg_focal) %>% 
+  mutate(resid = dh_agg_prox_es_bf21$scaledResiduals) 
 
 ## 日ごとに個体追跡セッション番号を作成  
 date_focal_list <- focal_agg_prox_es_bf21_full %>% 
@@ -481,6 +509,15 @@ date_focal_list <- focal_agg_prox_es_bf21_full %>%
   group_by(date) %>% 
   mutate(dateID = 1:n()) %>% 
   ungroup() 
+
+## フォーカル間に入れる空白行  
+time_blank_agg_prox_es_bf21 <- focal_agg_prox_es_bf21_full %>% 
+  group_by(focalID, date, subject) %>% 
+  summarise(time = max(time) + 1) %>% 
+  group_by(focalID, date, subject) %>% 
+  complete(time = seq(time, time + 30, by = 3)) %>% 
+  ungroup() %>% 
+  mutate(resid = NA)
 
 focal_agg_prox_es_bf21_full2 <- focal_agg_prox_es_bf21_full %>% 
   left_join(date_focal_list) %>% 
@@ -496,11 +533,15 @@ focal_agg_prox_es_bf21_full2 <- focal_agg_prox_es_bf21_full %>%
   mutate(actualtime = start_time + time) %>% 
   group_by(focalID) %>% 
   complete(time = full_seq(time, 1)) %>% 
-  filter(time %% 3 == 0)
-  
-recal_agg_prox_es_bf21 <- recalculateResiduals(dh_agg_prox_es_bf21, group = focal_agg_prox_es_bf21$time)
+  filter(time %% 3 == 0) %>% 
+  full_join(time_blank_agg_prox_es_bf21) %>% 
+  arrange(focalID, time)
 
-testTemporalAutocorrelation(recal_agg_prox_es_bf21, time = unique(focal_agg_prox_es_bf21$time))
+## 自己相関の図示  
+acf(focal_agg_prox_es_bf21_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_prox_es_bf21_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
@@ -555,11 +596,11 @@ summary_agg_prox_es_bf21 <- summary(m_agg_prox_es_bf21)
 
 model_parameters(m_agg_prox_es_bf21,  ci = 0.95,
                  centrality = "median", ci_method = "eti") %>% 
-  filter(Parameter != "sigma") %>% 
+  filter(Parameter != "phi") %>% 
   data.frame() %>%
   dplyr::select(1,2, 4, 5,6, 7,8) %>% 
-  mutate("Bulk ESS" = summary_agg_prox_es$fixed$Bulk_ESS,
-         "Tail ESS" = summary_agg_prox_es$fixed$Tail_ESS) %>% 
+  mutate("Bulk ESS" = summary_agg_prox_es_bf21$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_prox_es_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
   dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
@@ -691,12 +732,12 @@ bayesplotパッケージ[@Gabry2022]の`pp_check`関数で、事後分布から�
 ```{r, fig.height = 4.5}
 ## 全期間    
 pp_check(m_agg_RG_an, ndraws = 100)+
-  theme_bw()+
+  theme_bw() +
   theme(aspect.ratio = 0.9)
 
 ## 21年より前
 pp_check(m_agg_RG_an_bf21, ndraws = 100)+
-  theme_bw()+
+  theme_bw() +
   theme(aspect.ratio = 0.9)
 ```  
 <br/>  
@@ -722,12 +763,9 @@ data.frame(Rhat = brms::rhat(m_agg_RG_an_bf21)) %>%
 最後に、残差の時系列相関を調べます。まずは全期間についてです。有意な時系列相関はないようです。    
 ```{r}
 ## 全時間ポイントの作成  
-focal_agg_RG_an_full <-  focal_agg_RG_an%>% 
+focal_agg_RG_an_full <-  focal_agg_RG_an %>% 
   drop_na(agg_focal) %>% 
-  mutate(resid = dh_agg_RG_an$scaledResiduals) %>% 
-  group_by(focalID, subject, date) %>% 
-  complete(time = full_seq(time, 1)) %>% 
-  ungroup()
+  mutate(resid = dh_agg_RG_an$scaledResiduals) 
 
 ## 日ごとに個体追跡セッション番号を作成  
 date_focal_list <- focal_agg_RG_an_full %>% 
@@ -735,6 +773,15 @@ date_focal_list <- focal_agg_RG_an_full %>%
   group_by(date) %>% 
   mutate(dateID = 1:n()) %>% 
   ungroup() 
+
+## フォーカル間に入れる空白行  
+time_blank_agg_RG_an <- focal_agg_RG_an_full %>% 
+  group_by(focalID, date, subject) %>% 
+  summarise(time = max(time) + 1) %>% 
+  group_by(focalID, date, subject) %>% 
+  complete(time = seq(time, time + 30, by = 3)) %>% 
+  ungroup() %>% 
+  mutate(resid = NA)
 
 focal_agg_RG_an_full2 <- focal_agg_RG_an_full %>% 
   left_join(date_focal_list) %>% 
@@ -750,11 +797,15 @@ focal_agg_RG_an_full2 <- focal_agg_RG_an_full %>%
   mutate(actualtime = start_time + time) %>% 
   group_by(focalID) %>% 
   complete(time = full_seq(time, 1)) %>% 
-  filter(time %% 3 == 0)
-  
-recal_agg_RG_an <- recalculateResiduals(dh_agg_RG_an, group = focal_agg_RG_an$time)
+  filter(time %% 3 == 0) %>% 
+  full_join(time_blank_agg_RG_an) %>% 
+  arrange(focalID, time)
 
-testTemporalAutocorrelation(recal_agg_RG_an, time = unique(focal_agg_RG_an$time))
+## 自己相関の図示  
+acf(focal_agg_RG_an_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_RG_an_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
@@ -763,10 +814,7 @@ testTemporalAutocorrelation(recal_agg_RG_an, time = unique(focal_agg_RG_an$time)
 ## 全時間ポイントの作成  
 focal_agg_RG_an_bf21_full <-  focal_agg_RG_an_bf21 %>% 
   drop_na(agg_focal) %>% 
-  mutate(resid = dh_agg_RG_an_bf21$scaledResiduals) %>% 
-  group_by(focalID, subject, date) %>% 
-  complete(time = full_seq(time, 1)) %>% 
-  ungroup()
+  mutate(resid = dh_agg_RG_an_bf21$scaledResiduals) 
 
 ## 日ごとに個体追跡セッション番号を作成  
 date_focal_list <- focal_agg_RG_an_bf21_full %>% 
@@ -774,6 +822,15 @@ date_focal_list <- focal_agg_RG_an_bf21_full %>%
   group_by(date) %>% 
   mutate(dateID = 1:n()) %>% 
   ungroup() 
+
+## フォーカル間に入れる空白行  
+time_blank_agg_RG_an_bf21 <- focal_agg_RG_an_bf21_full %>% 
+  group_by(focalID, date, subject) %>% 
+  summarise(time = max(time) + 1) %>% 
+  group_by(focalID, date, subject) %>% 
+  complete(time = seq(time, time + 30, by = 3)) %>% 
+  ungroup() %>% 
+  mutate(resid = NA)
 
 focal_agg_RG_an_bf21_full2 <- focal_agg_RG_an_bf21_full %>% 
   left_join(date_focal_list) %>% 
@@ -789,11 +846,15 @@ focal_agg_RG_an_bf21_full2 <- focal_agg_RG_an_bf21_full %>%
   mutate(actualtime = start_time + time) %>% 
   group_by(focalID) %>% 
   complete(time = full_seq(time, 1)) %>% 
-  filter(time %% 3 == 0)
-  
-recal_agg_RG_an_bf21 <- recalculateResiduals(dh_agg_RG_an_bf21, group = focal_agg_RG_an_bf21$time)
+  filter(time %% 3 == 0) %>% 
+  full_join(time_blank_agg_RG_an_bf21) %>% 
+  arrange(focalID, time)
 
-testTemporalAutocorrelation(recal_agg_RG_an_bf21, time = unique(focal_agg_RG_an_bf21$time))
+## 自己相関の図示  
+acf(focal_agg_RG_an_bf21_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_RG_an_bf21_full2$resid, type = "Ljung-Box", lag = 10)  
 ```
 <br/>  
 
@@ -1043,9 +1104,8 @@ focal_agg_RG_es_full2 <- focal_agg_RG_es_full %>%
   complete(time = full_seq(time, 1)) %>% 
   filter(time %% 3 == 0)
   
-recal_agg_RG_es <- recalculateResiduals(dh_agg_RG_es, group = focal_agg_RG_es$time)
-
-testTemporalAutocorrelation(recal_agg_RG_es, time = unique(focal_agg_RG_es$time))
+testTemporalAutocorrelation(dh_agg_RG_es, time = drop_na(focal_agg_RG_es_full2, 
+                                                           agg_focal) %>% .$actualtime)
 ```
 <br/>  
 
@@ -1082,9 +1142,8 @@ focal_agg_RG_es_bf21_full2 <- focal_agg_RG_es_bf21_full %>%
   complete(time = full_seq(time, 1)) %>% 
   filter(time %% 3 == 0)
   
-recal_agg_RG_es_bf21 <- recalculateResiduals(dh_agg_RG_es_bf21, group = focal_agg_RG_es_bf21$time)
-
-testTemporalAutocorrelation(recal_agg_RG_es_bf21, time = unique(focal_agg_RG_es_bf21$time))
+testTemporalAutocorrelation(dh_agg_RG_es_bf21, time = drop_na(focal_agg_RG_es_bf21_full2, 
+                                                           agg_focal) %>% .$actualtime)
 ```
 <br/>  
 

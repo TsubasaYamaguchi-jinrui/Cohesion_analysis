@@ -1,10 +1,10 @@
-Explanatory variables,Median,95%CI,PD (%),Rhat,ESS,Bulk ESS,Tail ESS
-Intercept,-5.13,"[-6.69, -3.94]",100.00,1.00,33649.84,32698.67,23900.45
-TY within 3m? (Yes vs No),-11.84,"[-50.88, -1.16]",99.60,1.00,11757.99,14765.93,9333.41
-IT within 3m? (Yes vs No),-0.32,"[-3.63, 1.65]",60.66,1.00,38295.93,40900.48,21639.05
-KR within 3m? (Yes vs No),-0.17,"[-1.50, 0.89]",61.68,1.00,56747.81,53713.21,27928.73
-TY present during focal? (Yes vs No),-0.16,"[-1.74, 1.31]",57.89,1.00,51131.03,29263.63,26592.30
-IT present during focal? (Yes vs No),-0.78,"[-2.45, 0.83]",82.82,1.00,45324.11,37218.56,31160.67
-No. of females within 3m,-2.01,"[-5.09, -0.47]",99.88,1.00,29039.28,40068.02,22397.70
-No. of females on the day,-0.14,"[-0.67, 0.39]",70.87,1.00,48748.47,53668.49,29729.99
-No. of estrous females on the day,0.87,"[0.22, 1.66]",99.61,1.00,40745.21,32516.24,27640.68
+Explanatory variables,Component,CI,95%CI,PD (%),Rhat,Bulk ESS,Tail ESS
+Intercept,conditional,0.95,"[-6.72, -3.96]",100.00,1.00,28485.96,25328.05
+TY within 3m? (Yes vs No),conditional,0.95,"[-51.39, -1.15]",99.61,1.00,16557.89,9864.21
+IT within 3m? (Yes vs No),conditional,0.95,"[-3.65, 1.66]",60.56,1.00,41961.65,22609.40
+KR within 3m? (Yes vs No),conditional,0.95,"[-1.49, 0.89]",61.25,1.00,46712.69,27303.94
+TY present during focal? (Yes vs No),conditional,0.95,"[-1.75, 1.32]",57.94,1.00,33333.43,26134.08
+IT present during focal? (Yes vs No),conditional,0.95,"[-2.43, 0.85]",82.82,1.00,32266.83,27287.10
+No. of females within 3m,conditional,0.95,"[-5.16, -0.50]",99.89,1.00,34875.07,18438.31
+No. of females on the day,conditional,0.95,"[-0.67, 0.39]",70.49,1.00,36332.78,29827.33
+No. of estrous females on the day,conditional,0.95,"[0.22, 1.64]",99.61,1.00,28287.57,26292.20
