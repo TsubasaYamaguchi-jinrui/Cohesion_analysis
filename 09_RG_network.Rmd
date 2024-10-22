@@ -1792,12 +1792,10 @@ model_parameters(m_an2_IT_eigen)
 
 ## 保存
 # saveRDS(b_CSI_IT_an2, "data/b_CSI_IT_an2.rds")
-# saveRDS(b_no_kin_an2_IT, "data/b_no_kin_an2_IT.rds")
 # saveRDS(b_rank_an2_IT, "data/b_rank_an2_IT.rds")
 
 ## 読み込み  
 b_CSI_IT_an2 <- readRDS("data/b_CSI_IT_an2.rds")
-b_no_kin_an2_IT <- readRDS("data/b_no_kin_an2_IT.rds")
 b_rank_an2_IT <- readRDS("data/b_rank_an2_IT.rds")
 ```
 
@@ -1815,12 +1813,10 @@ model_parameters(m_an2_IT_eigen,  ci = 0.95,dispersion = TRUE,
          "Tail ESS" = summary_an2_IT_eigen$fixed$Tail_ESS) %>% 
   mutate(`P left` = c(NA,
                       mean(fixef(m_an2_IT_eigen)[2,1] < b_CSI_IT_an2),
-                      mean(fixef(m_an2_IT_eigen)[3,1] < b_no_kin_an2_IT),
-                      mean(fixef(m_an2_IT_eigen)[4,1] < b_rank_an2_IT))) %>% 
+                      mean(fixef(m_an2_IT_eigen)[3,1] < b_rank_an2_IT))) %>% 
   mutate(`P right` = c(NA,
                       mean(fixef(m_an2_IT_eigen)[2,1] > b_CSI_IT_an2),
-                      mean(fixef(m_an2_IT_eigen)[3,1] > b_no_kin_an2_IT),
-                      mean(fixef(m_an2_IT_eigen)[4,1] > b_rank_an2_IT))) %>% 
+                      mean(fixef(m_an2_IT_eigen)[3,1] > b_rank_an2_IT))) %>% 
   select(1, 2, 3, 7, 8, everything()) %>% 
   mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
                                                   "b_CSI_IT" = "CSI with IT",
@@ -1949,9 +1945,9 @@ model_parameters(m_nm_TY_eigen)
 # }
 
 ## 保存
-saveRDS(b_CSI_TY_nm, "data/b_CSI_TY_nm.rds")
-saveRDS(b_no_kin_nm_TY, "data/b_no_kin_nm_TY.rds")
-saveRDS(b_rank_nm_TY, "data/b_rank_nm_TY.rds")
+# saveRDS(b_CSI_TY_nm, "data/b_CSI_TY_nm.rds")
+# saveRDS(b_no_kin_nm_TY, "data/b_no_kin_nm_TY.rds")
+# saveRDS(b_rank_nm_TY, "data/b_rank_nm_TY.rds")
 
 ## 読み込み  
 b_CSI_TY_nm <- readRDS("data/b_CSI_TY_nm.rds")
@@ -2108,9 +2104,9 @@ model_parameters(m_nm_IT_eigen)
 # }
 
 ## 保存
-saveRDS(b_CSI_IT_nm, "data/b_CSI_IT_nm.rds")
-saveRDS(b_no_kin_nm_IT, "data/b_no_kin_nm_IT.rds")
-saveRDS(b_rank_nm_IT, "data/b_rank_nm_IT.rds")
+# saveRDS(b_CSI_IT_nm, "data/b_CSI_IT_nm.rds")
+# saveRDS(b_no_kin_nm_IT, "data/b_no_kin_nm_IT.rds")
+# saveRDS(b_rank_nm_IT, "data/b_rank_nm_IT.rds")
 
 ## 読み込み  
 b_CSI_IT_nm <- readRDS("data/b_CSI_IT_nm.rds")

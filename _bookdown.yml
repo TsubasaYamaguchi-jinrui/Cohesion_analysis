@@ -9,6 +9,7 @@ rmd_files:
   - 06_aggression_injury.Rmd
   - 07_cohesion_analysis.Rmd
   - 08_cohesion_aggression.Rmd  
+  - 09_RG_network.Rmd  
   - sessioninfo.Rmd
 output_dir: "docs"  
 language:

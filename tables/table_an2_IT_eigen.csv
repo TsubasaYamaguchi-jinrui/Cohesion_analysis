@@ -1,0 +1,4 @@
+Explanatory variables,Median,MAD,P left,P right,Rhat,Bulk ESS,Tail ESS
+Intercept,0.54,0.91,NA,NA,1.00,5597.50,2372.08
+CSI with IT,0.35,0.28,0.20,0.80,1.00,4237.81,2689.84
+Ordinal rank,-0.26,0.20,0.80,0.20,1.00,4183.41,2767.19
