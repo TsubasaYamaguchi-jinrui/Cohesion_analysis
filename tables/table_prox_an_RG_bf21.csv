@@ -1,9 +1,9 @@
-Explanatory variables,Median,95%CI,PD (%),Rhat,Bulk ESS,Tail ESS
-Intercept,0.66,"[0.49, 0.83]",100.00,1.00,44033.46,31939.57
-TY present? (Yes vs No),0.13,"[-0.05, 0.32]",92.23,1.00,49554.76,32265.78
-IT present? (Yes vs No),-0.04,"[-0.22, 0.14]",67.86,1.00,51619.16,32363.93
-No. of non-troop males on the day,0.06,"[-0.08, 0.20]",81.60,1.00,35903.46,31348.45
-No. of females on the day,-0.00,"[-0.11, 0.11]",50.97,1.00,45446.51,31514.84
-No. of estrous females on the day,0.01,"[-0.09, 0.12]",60.32,1.00,44464.13,31949.30
-No. of kin individuals on the day,0.15,"[0.06, 0.25]",99.86,1.00,42306.90,30217.06
-Study period (MS20 vs MS19),0.01,"[-0.21, 0.22]",51.98,1.00,45448.70,32977.45
+Explanatory variables,Median,MAD,95%CI,PD (%),Rhat,Bulk ESS,Tail ESS
+Intercept,0.66,0.09,"[0.49, 0.83]",100.00,1.00,44033.46,31939.57
+TY present? (Yes vs No),0.13,0.09,"[-0.05, 0.32]",92.23,1.00,49554.76,32265.78
+IT present? (Yes vs No),-0.04,0.09,"[-0.22, 0.14]",67.86,1.00,51619.16,32363.93
+No. of non-troop males on the day,0.06,0.07,"[-0.08, 0.20]",81.60,1.00,35903.46,31348.45
+No. of females on the day,-0.00,0.06,"[-0.11, 0.11]",50.97,1.00,45446.51,31514.84
+No. of estrous females on the day,0.01,0.05,"[-0.09, 0.12]",60.32,1.00,44464.13,31949.30
+No. of kin individuals on the day,0.15,0.05,"[0.06, 0.25]",99.86,1.00,42306.90,30217.06
+Study period (MS20 vs MS19),0.01,0.11,"[-0.21, 0.22]",51.98,1.00,45448.70,32977.45

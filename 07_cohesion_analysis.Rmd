@@ -352,11 +352,11 @@ data.frame(Rhat = brms::rhat(m_cohesion_an_bf21)) %>%
 ```{r, echo = FALSE}
 summary_cohesion_an <- summary(m_cohesion_an)
 
-model_parameters(m_cohesion_an,  ci = 0.95,
+model_parameters(m_cohesion_an,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1, 3,4,6, 7,8) %>% 
   mutate("Bulk ESS" = summary_cohesion_an$fixed$Bulk_ESS,
          "Tail ESS" = summary_cohesion_an$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -394,11 +394,11 @@ write_csv(table_cohesion_an, "tables/table_cohesion_an.csv")
 ```{r, echo = FALSE}
 summary_cohesion_an_bf21 <- summary(m_cohesion_an_bf21)
 
-model_parameters(m_cohesion_an_bf21,  ci = 0.95,
+model_parameters(m_cohesion_an_bf21,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1, 3,4,6, 7,8) %>% 
   mutate("Bulk ESS" = summary_cohesion_an_bf21$fixed$Bulk_ESS,
          "Tail ESS" = summary_cohesion_an_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -947,15 +947,15 @@ data.frame(Rhat = brms::rhat(m_prox_an_RG_bf21)) %>%
 ```{r, echo = FALSE}
 summary_prox_an_RG <- summary(m_prox_an_RG)
 
-model_parameters(m_prox_an_RG,  ci = 0.95,
+model_parameters(m_prox_an_RG,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1,3,4, 6, 7,8, 9) %>% 
   mutate("Bulk ESS" = summary_prox_an_RG$fixed$Bulk_ESS,
          "Tail ESS" = summary_prox_an_RG$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
-  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
   mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
   rename(`PD (%)` = pd) %>% 
@@ -989,15 +989,15 @@ write_csv(table_prox_an_RG, "tables/table_prox_an_RG.csv")
 ```{r, echo = FALSE}
 summary_prox_an_RG_bf21 <- summary(m_prox_an_RG_bf21)
 
-model_parameters(m_prox_an_RG_bf21,  ci = 0.95,
+model_parameters(m_prox_an_RG_bf21,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1,3,4, 6, 7,8, 9) %>% 
   mutate("Bulk ESS" = summary_prox_an_RG_bf21$fixed$Bulk_ESS,
          "Tail ESS" = summary_prox_an_RG_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
-  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
   mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
   rename(`PD (%)` = pd) %>% 
@@ -1231,15 +1231,15 @@ data.frame(Rhat = brms::rhat(m_prox_nm_RG)) %>%
 ```{r, echo = FALSE}
 summary_prox_nm_RG <- summary(m_prox_nm_RG)
 
-model_parameters(m_prox_nm_RG,  ci = 0.95,
+model_parameters(m_prox_nm_RG,  ci = 0.95, dispersion = T,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1,3,4, 6, 7,8, 9) %>% 
   mutate("Bulk ESS" = summary_prox_nm_RG$fixed$Bulk_ESS,
          "Tail ESS" = summary_prox_nm_RG$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
-  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
   mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
   rename(`PD (%)` = pd) %>% 
@@ -1471,15 +1471,15 @@ data.frame(Rhat = brms::rhat(m_prox_an_F_bf21)) %>%
 ```{r, echo = FALSE}
 summary_prox_an_F <- summary(m_prox_an_F)
 
-model_parameters(m_prox_an_F,  ci = 0.95,
+model_parameters(m_prox_an_F,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1,3,4, 6, 7,8, 9) %>% 
   mutate("Bulk ESS" = summary_prox_an_F$fixed$Bulk_ESS,
          "Tail ESS" = summary_prox_an_F$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
-  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
   mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
   rename(`PD (%)` = pd) %>% 
@@ -1513,15 +1513,15 @@ write_csv(table_prox_an_F, "tables/table_prox_an_F.csv")
 ```{r, echo = FALSE}
 summary_prox_an_F_bf21 <- summary(m_prox_an_F_bf21)
 
-model_parameters(m_prox_an_F_bf21,  ci = 0.95,
+model_parameters(m_prox_an_F_bf21,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1,3,4, 6, 7,8, 9) %>% 
   mutate("Bulk ESS" = summary_prox_an_F_bf21$fixed$Bulk_ESS,
          "Tail ESS" = summary_prox_an_F_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
-  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
   mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
   rename(`PD (%)` = pd) %>% 
@@ -1755,15 +1755,15 @@ data.frame(Rhat = brms::rhat(m_prox_nm_F)) %>%
 ```{r, echo = FALSE}
 summary_prox_nm_F <- summary(m_prox_nm_F)
 
-model_parameters(m_prox_nm_F,  ci = 0.95,
+model_parameters(m_prox_nm_F,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,3,5,6, 7,8) %>% 
+  dplyr::select(1,3,4, 6, 7,8, 9) %>% 
   mutate("Bulk ESS" = summary_prox_nm_F$fixed$Bulk_ESS,
          "Tail ESS" = summary_prox_nm_F$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
-  dplyr::select(c(1,2,3, 9), everything()) %>% 
+  dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
   mutate(pd = str_c(sprintf("%.2f",pd*100))) %>% 
   rename(`PD (%)` = pd) %>% 

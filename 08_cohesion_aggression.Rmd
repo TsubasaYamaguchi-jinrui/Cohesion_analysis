@@ -234,11 +234,11 @@ Box.test(focal_agg_prox_an_bf21_full2$resid, type = "Ljung-Box", lag = 10)
 ```{r, echo = FALSE}
 summary_agg_prox_an <- summary(m_agg_prox_an)
 
-model_parameters(m_agg_prox_an,  ci = 0.95,
+model_parameters(m_agg_prox_an,  ci = 0.95, dispersion = T,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  dplyr::select(1,2, 3, 5, 6, 7,8) %>% 
   mutate("Bulk ESS" = summary_agg_prox_an$fixed$Bulk_ESS,
          "Tail ESS" = summary_agg_prox_an$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -278,13 +278,13 @@ write_csv(table_agg_prox_an, "tables/table_agg_prox_an.csv")
 ```{r, echo = FALSE}
 summary_agg_prox_an_bf21 <- summary(m_agg_prox_an_bf21)
 
-model_parameters(m_agg_prox_an_bf21,  ci = 0.95,
+model_parameters(m_agg_prox_an_bf21,  ci = 0.95, dispersion = T,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
-  mutate("Bulk ESS" = summary_agg_prox_an$fixed$Bulk_ESS,
-         "Tail ESS" = summary_agg_prox_an$fixed$Tail_ESS) %>% 
+  dplyr::select(1,2, 3, 5, 6, 7,8) %>% 
+  mutate("Bulk ESS" = summary_agg_prox_an_bf21$fixed$Bulk_ESS,
+         "Tail ESS" = summary_agg_prox_an_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
   dplyr::select(c(1,2,3, 10), everything()) %>% 
   dplyr::select(-CI_low, -CI_high) %>% 
@@ -547,14 +547,16 @@ Box.test(focal_agg_prox_es_bf21_full2$resid, type = "Ljung-Box", lag = 10)
 
 #### 結果の確認  
 まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
+#### 結果の確認  
+まずは、全期間のデータを用いたモデルについてみる。太字になっている変数は95%確信区間が0をまたいでおらず、有意な影響があるといえる。  
 ```{r, echo = FALSE}
 summary_agg_prox_es <- summary(m_agg_prox_es)
 
-model_parameters(m_agg_prox_es,  ci = 0.95,
+model_parameters(m_agg_prox_es,  ci = 0.95, dispersion = T,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  dplyr::select(1,2, 3, 5, 6, 7,8) %>% 
   mutate("Bulk ESS" = summary_agg_prox_es$fixed$Bulk_ESS,
          "Tail ESS" = summary_agg_prox_es$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -594,11 +596,11 @@ write_csv(table_agg_prox_es, "tables/table_agg_prox_es.csv")
 ```{r, echo = FALSE}
 summary_agg_prox_es_bf21 <- summary(m_agg_prox_es_bf21)
 
-model_parameters(m_agg_prox_es_bf21,  ci = 0.95,
+model_parameters(m_agg_prox_es_bf21,  ci = 0.95, dispersion = T,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "phi") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  dplyr::select(1, 3,4, 6, 7,8, 9) %>% 
   mutate("Bulk ESS" = summary_agg_prox_es_bf21$fixed$Bulk_ESS,
          "Tail ESS" = summary_agg_prox_es_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -675,7 +677,7 @@ m_agg_RG_an <- brm(agg_focal ~ RG_female_std + RG_TY + RG_IT + RG_KR +
                          female_std + est_std + TY_presence + IT_presence + 
                          (1|focalID) + (1|subject),
                        family = bernoulli,
-                       iter = 11000, warmup = 1000, seed = 13,
+                       iter = 11000, warmup = 1000, seed = 123,
                        prior = c(prior(student_t(4,0,15), class = "b"),
                                  prior(student_t(4,0,15), class = "Intercept"),
                                  prior(student_t(4,0,10), class = "sd")),
@@ -809,7 +811,7 @@ Box.test(focal_agg_RG_an_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
-2021年交尾期を除いた場合も同じです。  
+2021年交尾期を除いた場合はあるようです。    
 ```{r}
 ## 全時間ポイントの作成  
 focal_agg_RG_an_bf21_full <-  focal_agg_RG_an_bf21 %>% 
@@ -863,11 +865,11 @@ Box.test(focal_agg_RG_an_bf21_full2$resid, type = "Ljung-Box", lag = 10)
 ```{r, echo = FALSE}
 summary_agg_RG_an <- summary(m_agg_RG_an)
 
-model_parameters(m_agg_RG_an,  ci = 0.95,
+model_parameters(m_agg_RG_an,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  dplyr::select(1,2, 3,  5,6, 7,8) %>% 
   mutate("Bulk ESS" = summary_agg_RG_an$fixed$Bulk_ESS,
          "Tail ESS" = summary_agg_RG_an$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -906,11 +908,11 @@ write_csv(table_agg_RG_an, "tables/table_agg_RG_an.csv")
 ```{r, echo = FALSE}
 summary_agg_RG_an_bf21 <- summary(m_agg_RG_an_bf21)
 
-model_parameters(m_agg_RG_an_bf21,  ci = 0.95,
+model_parameters(m_agg_RG_an_bf21,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  dplyr::select(1,2, 3, 5,6, 7,8) %>% 
   mutate("Bulk ESS" = summary_agg_RG_an$fixed$Bulk_ESS,
          "Tail ESS" = summary_agg_RG_an$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -1104,12 +1106,15 @@ focal_agg_RG_es_full2 <- focal_agg_RG_es_full %>%
   complete(time = full_seq(time, 1)) %>% 
   filter(time %% 3 == 0)
   
-testTemporalAutocorrelation(dh_agg_RG_es, time = drop_na(focal_agg_RG_es_full2, 
-                                                           agg_focal) %>% .$actualtime)
+## 自己相関の図示  
+acf(focal_agg_RG_es_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_RG_es_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
-2021年交尾期を除いた場合も同じです。  
+2021年交尾期を除いた場合はわずかにあるよう。    
 ```{r}
 ## 全時間ポイントの作成  
 focal_agg_RG_es_bf21_full <-  focal_agg_RG_es_bf21 %>% 
@@ -1142,8 +1147,11 @@ focal_agg_RG_es_bf21_full2 <- focal_agg_RG_es_bf21_full %>%
   complete(time = full_seq(time, 1)) %>% 
   filter(time %% 3 == 0)
   
-testTemporalAutocorrelation(dh_agg_RG_es_bf21, time = drop_na(focal_agg_RG_es_bf21_full2, 
-                                                           agg_focal) %>% .$actualtime)
+## 自己相関の図示  
+acf(focal_agg_RG_es_bf21_full2$resid, lag.max = 10, na.action = na.pass)
+
+## Box-Ljung test
+Box.test(focal_agg_RG_es_bf21_full2$resid, type = "Ljung-Box", lag = 10)
 ```
 <br/>  
 
@@ -1152,11 +1160,11 @@ testTemporalAutocorrelation(dh_agg_RG_es_bf21, time = drop_na(focal_agg_RG_es_bf
 ```{r, echo = FALSE}
 summary_agg_RG_es <- summary(m_agg_RG_es)
 
-model_parameters(m_agg_RG_es,  ci = 0.95,
+model_parameters(m_agg_RG_es,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "sigma") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  dplyr::select(1,2, 3,  5,6, 7,8) %>% 
   mutate("Bulk ESS" = summary_agg_RG_es$fixed$Bulk_ESS,
          "Tail ESS" = summary_agg_RG_es$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 
@@ -1195,11 +1203,11 @@ write_csv(table_agg_RG_es, "tables/table_agg_RG_es.csv")
 ```{r, echo = FALSE}
 summary_agg_RG_es_bf21 <- summary(m_agg_RG_es_bf21)
 
-model_parameters(m_agg_RG_es_bf21,  ci = 0.95,
+model_parameters(m_agg_RG_es_bf21,  ci = 0.95, dispersion = TRUE,
                  centrality = "median", ci_method = "eti") %>% 
   filter(Parameter != "phi") %>% 
   data.frame() %>%
-  dplyr::select(1,2, 4, 5,6, 7,8) %>% 
+  dplyr::select(1,2,3, 5,6, 7,8) %>% 
   mutate("Bulk ESS" = summary_agg_RG_es_bf21$fixed$Bulk_ESS,
          "Tail ESS" = summary_agg_RG_es_bf21$fixed$Tail_ESS) %>% 
   mutate("95%CI" = str_c("[",sprintf("%.2f",CI_low),", ",sprintf("%.2f",CI_high),"]")) %>% 

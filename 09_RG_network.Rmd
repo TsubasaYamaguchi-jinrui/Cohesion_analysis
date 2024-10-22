@@ -6,7 +6,7 @@
 各個体が休息集団にいたかを表すgroup by individual 形式のデータを作成します。  
 
 - 地上休息中のみを抽出    
-- 非発情メスのものと発情メスのものは区別    
+- 非発情メスののみを作成   
 - 交尾期と非交尾期は区別    
 - *IT*がいた時期に絞ったネットワークも作成します。   
 - メスは2019年時点で6歳以上の個体のみを含みます。  
@@ -18,810 +18,2169 @@ focal_RG <- focal_prox %>%
             by = c("subject" = "femaleID", "date")) %>% 
   filter(RG == "1" & T_G == "G") %>% 
   mutate(focalID = str_c(study_period, "_", no_focal)) %>% 
-  filter((study_period == "m18" & ID %in% c(adult18, "TY", "IT", "KR"))|
-            (study_period == "nm19" & ID %in% c(adult18, "TY", "IT", "KR"))|
-            (study_period == "m19" & ID %in% c(adult19, "TY", "IT", "KR"))|
-            (study_period == "m20" & ID %in% c(adult20, "TY", "IT", "KR"))|
-            (study_period == "nm21" & ID %in% c(adult20, "TY", "IT", "KR"))|
-            (study_period == "m21" & ID %in% c(adult21, "TY", "IT", "KR"))|
-            (study_period == "nm22" & ID %in% c(adult21, "TY", "IT", "KR"))) %>% 
-  select(date, study_period, focalID, time, TY_presence, IT_presence, subject, ID) %>% 
+  filter((study_period == "m18" & ID %in% c(adult18, "TY", "IT", "KR", "LK"))|
+            (study_period == "nm19" & ID %in% c(adult18, "TY", "IT", "KR", "LK"))|
+            (study_period == "m19" & ID %in% c(adult19, "TY", "IT", "KR", "LK"))|
+            (study_period == "m20" & ID %in% c(adult20, "TY", "IT", "KR", "LK"))|
+            (study_period == "nm21" & ID %in% c(adult20, "TY", "IT", "KR", "LK"))|
+            (study_period == "m21" & ID %in% c(adult21, "TY", "IT", "KR", "LK"))|
+            (study_period == "nm22" & ID %in% c(adult21, "TY", "IT", "KR", "LK"))) %>% 
+  select(date, study_period, focalID, time, TY_presence, IT_presence, rs2, subject, ID) %>% 
   mutate(presence = 1) %>% 
-  complete(nesting(date, study_period, focalID, time, TY_presence, IT_presence, subject), ID = ID) %>% 
+  complete(nesting(date, study_period, focalID, time, TY_presence, IT_presence, rs2, subject), ID = ID) %>% 
   mutate(presence = if_else(subject == ID, 1, presence)) %>% 
   replace_na(list(presence = 0)) %>% 
   pivot_wider(names_from = ID,
               values_from = presence) 
+
+focal_RG
 ```
+<br/>  
 
 ## 隣接行列の作成  
 交尾期は年によって追跡個体が異なるため、追跡個体のみに絞って隣接行列を作成します。途中で死亡している個体は除外します。    
 
-- 2018年、2019年: `Mik`, `Kil`, `Tam`, `Koh`, `Aka`, `Ntr`, `Ten`, `Tot`, `Hen`, `Hot`, `Mei`, `Ako`, `Kol`, `Mal`, `Kit`, `Kun`, `Mif`  
-
-- 2020年、2021年
+- 2018年、2019年: `Mik`, `Kil`, `Tam`, `Koh`, `Aka`, `Ntr`, `Ten`, `Tot`, `Hen`, `Hot`, `Mei`, `Ako`, `Kol`, `Mal`, `Kit`, `Kun`  
+- 2020年、2021年: `Kil`, `Kol`, `Ntr`, `Ten`, `Mal`, `Hot`, `Aka`   
 
 ```{r}
+female_1st <- c("Mik", "Kil", "Tam", "Koh", "Aka", "Ntr", "Ten", "Tot", 
+                "Hen", "Hot", "Mei", "Ako", "Kol", "Mal", "Kit", "Kun")
 
+female_2nd <- c("Kil", "Ntr", "Ten", 
+                "Hot", "Kol", "Mal", "Aka")  
 ```
+<br/>  
+　
+また、*TY*がいる日の絞ったもの、*IT*がいる日の絞ったものをそれぞれ作成します。後者については、*IT*がいる期間に限定して作成します。  
 
-
-
-### 交尾期(非発情メス)  
-### TYがいる日のみ  
+### 交尾期(非発情・2018~2019)  
+#### TYがいる日  
 ```{r}
+focal_RG_an1_TY <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m18", "m19")) %>% 
+  filter(TY_presence == 1) %>% 
+  select(one_of(female_1st), TY, KR, LK)
 
-```
-
-
-## ネットワーク分析    
-各年の群れオスと6歳以上のメスでネットワークを作成する。  
-
-```{r}
-female_list <- c("Mik", "Kil", "Tam", "Koh", "Aka", "Ntr", "Ten", "Hen", 
-                 "Hot", "Mei", "Ako", "Kol", "Mal", "Kit", "Kun", "Mif")
-
-focal_RG %>% 
-  select(1:6, one_of(female_list), TY, IT, KR) -> a
-
-b <- a %>% filter(TY_presence == 1) %>% filter(!str_detect(study_period, "nmm"))
-c <- a %>% filter(TY_presence == 0) %>% filter(!str_detect(study_period, "nmm"))
-
-matRG <- get_network(a %>% select(-(1:6)),
-                          data_format = "GBI",
-                          association_index = "SRI")
-
-
-matRG2 <- get_network(c %>% select(-(1:6)),
-                          data_format = "GBI",
-                          association_index = "SRI")
-
-met.eigen(matRG)
-
-focal_RG %>% 
-  group_by(study_period, subject) %>% 
-  summarise(n = n()) -> z
-```
-
-```{r}
-
-```
-
-
-### 2018年  
-
-#### 隣接行列の作成  
-```{r}
-RG_gbi %>% 
-  filter(str_detect(no_focal,"m18")) %>% 
-  select(-(1:4), -Coc,-Anz,-Har,-KM,-Ntm,-Trt,-rs2,-Mif,-TYpre,-ITpre) -> gbi_2018
-
-## 隣接行列を取得
-matRG_2018 <- get_network(gbi_2018,
-                          data_format = "GBI",
-                          association_index = "HWI")
-
-met.eigen(matRG)
+## 作成
+mat_RG_an1_TY <- get_network(focal_RG_an1_TY,
+                             data_format = "GBI",
+                             association_index = "SRI")
 ```
 
 隣接行列は以下の通り。  
 ```{r}
-matRG_2018 %>% 
+mat_RG_an1_TY %>% 
   data.frame() %>% 
   rownames_to_column(var = " ")
 ```
+<br/>  
 
-#### 固有ベクトル中心性の算出    
-各個体の固有ベクトル中心性は以下の通り。ほかのオスに比べるとTYがかなり高く、中心的であることが分かる。    
+#### ITがいる日  
 ```{r}
-ID18 <- data.frame(ID = c(adult18,"TY","IT","LK","KR"))
+focal_RG_an1_IT <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m18", "m19")) %>% 
+  filter(IT_presence == 1) %>% 
+  select(one_of(female_1st), IT, KR, LK)
 
-met.eigen(matRG_2018,
-          df = ID18,
-          dfid = 1) -> ID18_b
-
-ID18_b
-```
-
-```{r}
-ID18_b %>% 
-  mutate(mf = ifelse(ID %in% adult18,"メス",ID)) %>% 
-  group_by(mf) %>% 
-  summarise(mean = mean(eigen),
-            sd = sd(eigen)) %>%
-  ungroup() %>% 
-  replace_na(list(sd = 0)) %>% 
-  mutate(mf = fct_relevel(mf,"TY","IT","LK","KR","メス")) %>% 
-  ggplot(aes(x = mf))+
-  geom_pointrange(aes(y = mean, ymin = mean - sd, ymax = mean + sd),
-                  size = 1)+
-  theme_bw(base_size = 15)+
-  labs(y = "固\n有\nベ\nク\nト\nル\n中\n心\n性", x = "")+
-  theme(aspect.ratio = 1,
-        axis.text.x =  element_text(family = "Times New Roman"),
-        axis.title.y = element_text(family = "Yu Mincho",
-                                    angle = 0,
-                                    vjust = 0.5),
-        legend.text = element_text(family = "Yu Mincho"),
-        axis.text.y = element_text(family = "Times New Roman")) -> p_eigen18
-
-p_eigen18
-
-# ggsave("figure/p_eigen18.png", p_eigen18, dpi = 600, width = 90, height = 90, units = "mm")
-```
-
-#### ネットワーク図の描画  
-```{r}
-matRG_2018 %>% 
-  as_tbl_graph(directed = FALSE) %>%
-  ## `tbl_graph`に重み付き中心性の情報を追加
-  mutate(eigen = ID18_b$eigen) %>% 
-  ggraph(layout = "nicely")+
-  scale_size(range = c(6,13))+
-  geom_edge_link(aes(width = weight),color = "grey65",
-                 end_cap = circle(0.5,"cm"),
-                 start_cap = circle(0.5,"cm"))+
-  geom_node_point(aes(size = eigen), shape = 16, color = "black")+
-  geom_node_text(aes(label = name), color = "white")+
-  scale_edge_width(range = c(0.5,2))+
-  theme_graph() -> p_RG18
-
-p_RG18
-
-# ggsave("figure/p_RG18.png", height = 160,width =160, dpi = 600, units= "mm")
-```
-
-### 2019年  
-#### 隣接行列の作成  
-TYがいる日といない日で分ける。ITはいない日が多かったので省く。  
-
-**TYのいる日**  
-```{r}
-RG_gbi %>% 
-  filter(str_detect(no_focal,"m19")) %>% 
-  filter(TYpre == "1") %>% 
-  select(-(1:4), -Coc,-Anz,-Har,-KM,-Ntm,-Trt,-rs2,-TYpre, -ITpre, -IT, -Kur) -> gbi_2019_TY
-
-## 隣接行列を取得
-matRG_2019_TY <- get_network(gbi_2019_TY,
+## 作成
+mat_RG_an1_IT <- get_network(focal_RG_an1_IT,
                              data_format = "GBI",
-                             association_index = "HWI")
-```
-
-**TYのいない日**  
-```{r}
-RG_gbi %>% 
-  filter(str_detect(no_focal,"m19")) %>% 
-  filter(TYpre == "0") %>% 
-  select(-(1:4), -Coc,-Anz,-Har,-KM,-Ntm,-Trt,-rs2,-TYpre, -ITpre, -IT,-TY, -Kur) -> gbi_2019_notTY
-
-## 隣接行列を取得
-matRG_2019_notTY <- get_network(gbi_2019_notTY,
-                             data_format = "GBI",
-                             association_index = "HWI")
+                             association_index = "SRI")
 ```
 
 隣接行列は以下の通り。  
-
-**TYがいる日**  
 ```{r}
-matRG_2019_TY %>% 
+mat_RG_an1_IT %>% 
   data.frame() %>% 
   rownames_to_column(var = " ")
 ```
+<br/>  
 
-**TYがいない日**  
+### 交尾期(非発情・2020~2021)  
+#### TYがいる日  
 ```{r}
-matRG_2019_notTY %>% 
-  data.frame() %>% 
-  rownames_to_column(var = " ")
-```
+focal_RG_an2_TY <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m20", "m21")) %>% 
+  filter(TY_presence == 1) %>% 
+  select(one_of(female_2nd), TY, KR)
 
-#### 固有ベクトル中心性の算出    
-各個体の固有ベクトル中心性は以下の通り。
-
-**TYのいる日**  
-
-やはりほかのオスに比べるとTYが一番高い。  
-```{r}
-ID19_TY <- data.frame(ID = c(adult19,"TY","LK","KR"))
-
-met.eigen(matRG_2019_TY,
-          df = ID19_TY ,
-          dfid = 1) %>% 
-  drop_na() -> ID19_TY_b
-
-ID19_TY_b
-```
-
-```{r}
-ID19_TY_b %>% 
-  mutate(mf = ifelse(ID %in% adult19,"メス",ID)) %>% 
-  group_by(mf) %>% 
-  summarise(mean = mean(eigen),
-            sd = sd(eigen)) %>%
-  ungroup() %>% 
-  replace_na(list(sd = 0)) %>% 
-  mutate(mf = fct_relevel(mf,"TY","LK","KR","メス")) %>% 
-  ggplot(aes(x = mf))+
-  geom_pointrange(aes(y = mean, ymin = mean - sd, ymax = mean + sd),
-                  size = 1)+
-  theme_bw(base_size = 15)+
-  labs(y = "固\n有\nベ\nク\nト\nル\n中\n心\n性", x = "")+
-  theme(aspect.ratio = 1,
-        axis.text.x =  element_text(family = "Times New Roman"),
-        axis.title.y = element_text(family = "Yu Mincho",
-                                    angle = 0,
-                                    vjust = 0.5),
-        legend.text = element_text(family = "Yu Mincho"),
-        axis.text.y = element_text(family = "Times New Roman")) -> p_eigen19_TY
-
-p_eigen19_TY
-
-# ggsave("figure/p_eigen19_TY.png", p_eigen19_TY, dpi = 600, width = 90, height = 90, units = "mm")
-```
-
-**TYのいない日**  
-いない日は、*LK*の中心性がとても高くなる。  
-```{r}
-ID19_notTY <- data.frame(ID = c(adult19,"LK","KR"))
-
-met.eigen(matRG_2019_notTY,
-          df = ID19_notTY ,
-          dfid = 1) %>% 
-  drop_na() -> ID19_notTY_b
-
-ID19_notTY_b
-```
-
-```{r}
-ID19_notTY_b %>% 
-  mutate(mf = ifelse(ID %in% adult19,"メス",ID)) %>% 
-  group_by(mf) %>% 
-  summarise(mean = mean(eigen),
-            sd = sd(eigen)) %>%
-  ungroup() %>% 
-  replace_na(list(sd = 0)) %>% 
-  mutate(mf = fct_relevel(mf,"TY","LK","KR","メス")) %>% 
-  ggplot(aes(x = mf))+
-  geom_pointrange(aes(y = mean, ymin = mean - sd, ymax = mean + sd),
-                  size = 1)+
-  theme_bw(base_size = 15)+
-  labs(y = "固\n有\nベ\nク\nト\nル\n中\n心\n性", x = "")+
-  theme(aspect.ratio = 1,
-        axis.text.x =  element_text(family = "Times New Roman"),
-        axis.title.y = element_text(family = "Yu Mincho",
-                                    angle = 0,
-                                    vjust = 0.5),
-        legend.text = element_text(family = "Yu Mincho"),
-        axis.text.y = element_text(family = "Times New Roman")) -> p_eigen19_notTY
-
-p_eigen19_notTY
-
-# ggsave("figure/p_eigen19_notTY.png", p_eigen19_notTY, dpi = 600, width = 90, height = 90, units = "mm")
-```
-
-#### ネットワーク図の描画  
-```{r}
-matRG_2019_TY %>% 
-  as_tbl_graph(directed = FALSE) %>%
-  ## `tbl_graph`に重み付き中心性の情報を追加
-  mutate(eigen = ID19_TY_b$eigen) %>% 
-  ggraph(layout = "nicely")+
-  scale_size(range = c(6,13))+
-  geom_edge_link(aes(width = weight),color = "grey65",
-                 end_cap = circle(0.5,"cm"),
-                 start_cap = circle(0.5,"cm"))+
-  geom_node_point(aes(size = eigen), shape = 16, color = "black")+
-  geom_node_text(aes(label = name), color = "white")+
-  scale_edge_width(range = c(0.5,2))+
-  theme_graph() -> p_RG19_TY
-
-p_RG19_TY
-
-# ggsave("figure/p_RG19_TY.png", p_RG19_TY, height = 160,width =160, dpi = 600, units= "mm")
-```
-
-```{r}
-matRG_2019_notTY %>% 
-  as_tbl_graph(directed = FALSE) %>%
-  ## `tbl_graph`に重み付き中心性の情報を追加
-  mutate(eigen = ID19_notTY_b$eigen) %>% 
-  ggraph(layout = "nicely")+
-  scale_size(range = c(6,13))+
-  geom_edge_link(aes(width = weight),color = "grey65",
-                 end_cap = circle(0.5,"cm"),
-                 start_cap = circle(0.5,"cm"))+
-  geom_node_point(aes(size = eigen), shape = 16, color = "black")+
-  geom_node_text(aes(label = name), color = "white")+
-  scale_edge_width(range = c(0.5,2))+
-  theme_graph() -> p_RG19_notTY
-
-p_RG19_notTY
-
-# ggsave("figure/p_RG19_notTY.png", p_RG19_notTY, height = 160,width =160, dpi = 600, units= "mm")
-```
-
-#### 下位構造の検出  
-**TYがいる日**  
-```{r}
-graph19_TY <- graph_from_adjacency_matrix(matRG_2019_TY,
-                                           ## 有向グラフなら "directed"
-                                           mode= "undirected", 
-                                           ## 重みなしなら NULL
-                                           weighted = TRUE) 
-
-cluster_optimal(graph19_TY,
-                weights = E(graph19_TY)$weight) -> cluster_RG19_TY
-```
-
-クラスターのグループ分けは以下の通り。   
-4つに分かれる。  
-```{r}
-cluster_RG19_TY
-```
-
-モジュラリティは以下の通り。モジュラリティ―は2つに分ける場合は-0.5~0.5の間をとる。0.1なので、あまり大きくはない。  
-```{r}
-modularity(cluster_RG19_TY, directed = FALSE, weights = NULL)
-```
-
-**TYがいない日**  
-```{r}
-graph19_notTY <- graph_from_adjacency_matrix(matRG_2019_notTY,
-                                           ## 有向グラフなら "directed"
-                                           mode= "undirected", 
-                                           ## 重みなしなら NULL
-                                           weighted = TRUE) 
-
-cluster_optimal(graph19_notTY,
-                weights = E(graph19_notTY)$weight) -> cluster_RG19_notTY
-```
-
-クラスターのグループ分けは以下の通り。   
-3つに分かれる。  
-```{r}
-cluster_RG19_notTY
-```
-
-モジュラリティは以下の通り。モジュラリティ―は2つに分ける場合は-0.5~0.5の間をとる。0.25なので結構大きい。   
-```{r}
-modularity(cluster_RG19_notTY, directed = FALSE, weights = NULL)
-```
-
-### 2020年  
-#### 隣接行列の作成  
-TYがいる日といない日で分ける。ITはいない日が多かったので省く。  
-
-**TYのいる日**  
-```{r}
-RG_gbi %>% 
-  filter(str_detect(no_focal,"m20")) %>% 
-  filter(TYpre == "1") %>% 
-  select(-(1:4), -Har,-KM,-rs2,-TYpre, -ITpre, -IT, -Kur, -LK) -> gbi_2020_TY
-
-## 隣接行列を取得
-matRG_2020_TY <- get_network(gbi_2020_TY,
+## 作成
+mat_RG_an2_TY <- get_network(focal_RG_an2_TY,
                              data_format = "GBI",
-                             association_index = "HWI")
-```
-
-**TYのいない日**  
-```{r}
-RG_gbi %>% 
-  filter(str_detect(no_focal,"m20")) %>% 
-  filter(TYpre == "0") %>% 
-  select(-(1:4), -Har,-KM,-rs2,-TYpre, -ITpre, -IT,-TY, -Kur, -LK) -> gbi_2020_notTY
-
-## 隣接行列を取得
-matRG_2020_notTY <- get_network(gbi_2020_notTY,
-                             data_format = "GBI",
-                             association_index = "HWI")
+                             association_index = "SRI")
 ```
 
 隣接行列は以下の通り。  
-
-**TYがいる日**  
 ```{r}
-matRG_2020_TY %>% 
+mat_RG_an2_TY %>% 
   data.frame() %>% 
   rownames_to_column(var = " ")
 ```
+<br/>  
 
-**TYがいない日**  
+#### ITがいる日  
 ```{r}
-matRG_2020_notTY %>% 
-  data.frame() %>% 
-  rownames_to_column(var = " ")
-```
+focal_RG_an2_IT <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m20", "m21")) %>% 
+  filter(IT_presence == 1) %>% 
+  select(one_of(female_2nd), IT, KR)
 
-#### 固有ベクトル中心性の算出    
-各個体の固有ベクトル中心性は以下の通り。
-
-**TYのいる日**  
-
-KRに比べるとTYの方が高いが、過去2年に比べると低い？  
-```{r}
-ID20_TY <- data.frame(ID = c(adult20,"TY","KR"))
-
-met.eigen(matRG_2020_TY,
-          df = ID20_TY ,
-          dfid = 1) %>% 
-  drop_na() -> ID20_TY_b
-
-ID20_TY_b
-```
-
-```{r}
-ID20_TY_b %>% 
-  mutate(mf = ifelse(ID %in% adult20,"メス",ID)) %>% 
-  group_by(mf) %>% 
-  summarise(mean = mean(eigen),
-            sd = sd(eigen)) %>%
-  ungroup() %>% 
-  replace_na(list(sd = 0)) %>% 
-  mutate(mf = fct_relevel(mf,"TY","LK","KR","メス")) %>% 
-  ggplot(aes(x = mf))+
-  geom_pointrange(aes(y = mean, ymin = mean - sd, ymax = mean + sd),
-                  size = 1)+
-  theme_bw(base_size = 15)+
-  labs(y = "固\n有\nベ\nク\nト\nル\n中\n心\n性", x = "")+
-  theme(aspect.ratio = 1,
-        axis.text.x =  element_text(family = "Times New Roman"),
-        axis.title.y = element_text(family = "Yu Mincho",
-                                    angle = 0,
-                                    vjust = 0.5),
-        legend.text = element_text(family = "Yu Mincho"),
-        axis.text.y = element_text(family = "Times New Roman")) -> p_eigen20_TY
-
-p_eigen20_TY
-
-# ggsave("figure/p_eigen20_TY.png", p_eigen20_TY, dpi = 600, width = 90, height = 90, units = "mm")
-```
-
-**TYのいない日**  
-KRはTYがいなくてもあまり高くない。  
-```{r}
-ID20_notTY <- data.frame(ID = c(adult20,"LK","KR"))
-
-met.eigen(matRG_2020_notTY,
-          df = ID20_notTY ,
-          dfid = 1) %>% 
-  drop_na() -> ID20_notTY_b
-
-ID20_notTY_b
-```
-
-```{r}
-ID20_notTY_b %>% 
-  mutate(mf = ifelse(ID %in% adult20,"メス",ID)) %>% 
-  group_by(mf) %>% 
-  summarise(mean = mean(eigen),
-            sd = sd(eigen)) %>%
-  ungroup() %>% 
-  replace_na(list(sd = 0)) %>% 
-  mutate(mf = fct_relevel(mf,"TY","LK","KR","メス")) %>% 
-  ggplot(aes(x = mf))+
-  geom_pointrange(aes(y = mean, ymin = mean - sd, ymax = mean + sd),
-                  size = 1)+
-  theme_bw(base_size = 15)+
-  labs(y = "固\n有\nベ\nク\nト\nル\n中\n心\n性", x = "")+
-  theme(aspect.ratio = 1,
-        axis.text.x =  element_text(family = "Times New Roman"),
-        axis.title.y = element_text(family = "Yu Mincho",
-                                    angle = 0,
-                                    vjust = 0.5),
-        legend.text = element_text(family = "Yu Mincho"),
-        axis.text.y = element_text(family = "Times New Roman")) -> p_eigen20_notTY
-
-p_eigen20_notTY
-
-# ggsave("figure/p_eigen20_notTY.png", p_eigen20_notTY, dpi = 600, width = 90, height = 90, units = "mm")
-```
-
-#### ネットワーク図の描画  
-```{r}
-matRG_2020_TY %>% 
-  as_tbl_graph(directed = FALSE) %>%
-  ## `tbl_graph`に重み付き中心性の情報を追加
-  mutate(eigen = ID20_TY_b$eigen) %>% 
-  ggraph(layout = "nicely")+
-  scale_size(range = c(6,13))+
-  geom_edge_link(aes(width = weight),color = "grey65",
-                 end_cap = circle(0.5,"cm"),
-                 start_cap = circle(0.5,"cm"))+
-  geom_node_point(aes(size = eigen), shape = 16, color = "black")+
-  geom_node_text(aes(label = name), color = "white")+
-  scale_edge_width(range = c(0.5,2))+
-  theme_graph() -> p_RG20_TY
-
-p_RG20_TY
-
-# ggsave("figure/p_RG20_TY.png", p_RG20_TY, height = 160,width =160, dpi = 600, units= "mm")
-```
-
-```{r}
-matRG_2020_notTY %>% 
-  as_tbl_graph(directed = FALSE) %>%
-  ## `tbl_graph`に重み付き中心性の情報を追加
-  mutate(eigen = ID20_notTY_b$eigen) %>% 
-  ggraph(layout = "nicely")+
-  scale_size(range = c(6,13))+
-  geom_edge_link(aes(width = weight),color = "grey65",
-                 end_cap = circle(0.5,"cm"),
-                 start_cap = circle(0.5,"cm"))+
-  geom_node_point(aes(size = eigen), shape = 16, color = "black")+
-  geom_node_text(aes(label = name), color = "white")+
-  scale_edge_width(range = c(0.5,2))+
-  theme_graph() -> p_RG20_notTY
-
-p_RG20_notTY
-
-# ggsave("figure/p_RG20_notTY.png", p_RG20_notTY, height = 160,width =160, dpi = 600, units= "mm")
-```
-
-#### 下位構造の検出  
-**TYがいる日**  
-```{r}
-graph20_TY <- graph_from_adjacency_matrix(matRG_2020_TY,
-                                           ## 有向グラフなら "directed"
-                                           mode= "undirected", 
-                                           ## 重みなしなら NULL
-                                           weighted = TRUE) 
-
-cluster_optimal(graph20_TY,
-                weights = E(graph20_TY)$weight) -> cluster_RG20_TY
-```
-
-クラスターのグループ分けは以下の通り。   
-6つに分かれる。  
-```{r}
-cluster_RG20_TY
-```
-
-モジュラリティは以下の通り。モジュラリティ―は2つに分ける場合は-0.5~0.5の間をとる。0.22なのでそこそこ大きい?    
-```{r}
-modularity(cluster_RG20_TY, directed = FALSE, weights = NULL)
-```
-
-**TYがいない日**  
-```{r}
-graph20_notTY <- graph_from_adjacency_matrix(matRG_2020_notTY,
-                                           ## 有向グラフなら "directed"
-                                           mode= "undirected", 
-                                           ## 重みなしなら NULL
-                                           weighted = TRUE) 
-
-cluster_optimal(graph20_notTY,
-                weights = E(graph20_notTY)$weight) -> cluster_RG20_notTY
-```
-
-クラスターのグループ分けは以下の通り。   
-3つに分かれる。  
-```{r}
-cluster_RG20_notTY
-```
-
-モジュラリティは以下の通り。モジュラリティ―は2つに分ける場合は-0.5~0.5の間をとる。0.17なので、まあまあ大きい。  
-```{r}
-modularity(cluster_RG20_notTY, directed = FALSE, weights = NULL)
-```
-
-### 2021年  
-#### 隣接行列の作成  
-TYがいる日といない日で分ける。ITはいない日が多かったので省く。  
-
-**TYのいる日**  
-```{r}
-RG_gbi %>% 
-  filter(str_detect(no_focal,"m21")) %>% 
-  filter(TYpre == "1") %>% 
-  select(-(1:4), -rs2,-TYpre, -ITpre, -IT, -Kur, -LK, -Tam) -> gbi_2021_TY
-
-## 隣接行列を取得
-matRG_2021_TY <- get_network(gbi_2021_TY,
+## 作成
+mat_RG_an2_IT <- get_network(focal_RG_an2_IT,
                              data_format = "GBI",
-                             association_index = "HWI")
-```
-
-**TYのいない日**  
-```{r}
-RG_gbi %>% 
-  filter(str_detect(no_focal,"m21")) %>% 
-  filter(TYpre == "0") %>% 
-  select(-(1:4), -rs2,-TYpre, -ITpre, -IT,-TY, -Kur, -LK, -Tam) -> gbi_2021_notTY
-
-## 隣接行列を取得
-matRG_2021_notTY <- get_network(gbi_2021_notTY,
-                             data_format = "GBI",
-                             association_index = "HWI")
+                             association_index = "SRI")
 ```
 
 隣接行列は以下の通り。  
-
-**TYがいる日**  
 ```{r}
-matRG_2021_TY %>% 
+mat_RG_an1_IT %>% 
   data.frame() %>% 
   rownames_to_column(var = " ")
 ```
+<br/>  
 
-**TYがいない日**  
+### 非交尾期   
+#### TYがいる日  
 ```{r}
-matRG_2021_notTY %>% 
+focal_RG_nm_TY <- focal_RG %>% 
+  filter(study_period %in% c("nm19", "nm20", "nm21", "nm22")) %>% 
+  filter(TY_presence == 1) %>% 
+  select(one_of(female_1st), TY, KR, -Tam)
+
+## 作成
+mat_RG_nm_TY <- get_network(focal_RG_nm_TY,
+                            data_format = "GBI",
+                            association_index = "SRI")
+```
+
+隣接行列は以下の通り。  
+```{r}
+mat_RG_nm_TY %>% 
   data.frame() %>% 
   rownames_to_column(var = " ")
 ```
+<br/>  
 
-#### 固有ベクトル中心性の算出    
-各個体の固有ベクトル中心性は以下の通り。
-
-**TYのいる日**  
-
-TYがかなり大きいが、KRも2番目に大きくなっている。  
+#### ITがいる日  
 ```{r}
-ID21_TY <- data.frame(ID = c(adult21,"TY","KR","KM"))
+focal_RG_nm_IT <- focal_RG %>% 
+  filter(study_period %in% c("nm19", "nm20", "nm21")) %>% 
+  filter(IT_presence == 1) %>% 
+  select(one_of(female_1st), IT, KR, -Tam)
 
-met.eigen(matRG_2021_TY,
-          df = ID21_TY ,
-          dfid = 1) %>% 
-  drop_na() -> ID21_TY_b
-
-ID21_TY_b
+## 作成
+mat_RG_nm_IT <- get_network(focal_RG_nm_IT,
+                            data_format = "GBI",
+                            association_index = "SRI")
 ```
 
+隣接行列は以下の通り。  
 ```{r}
-ID21_TY_b %>% 
-  mutate(mf = ifelse(ID %in% adult21,"メス",ID)) %>% 
-  group_by(mf) %>% 
-  summarise(mean = mean(eigen),
-            sd = sd(eigen)) %>%
-  ungroup() %>% 
-  replace_na(list(sd = 0)) %>% 
-  mutate(mf = fct_relevel(mf,"TY","LK","KR","KM","メス")) %>% 
-  ggplot(aes(x = mf))+
-  geom_pointrange(aes(y = mean, ymin = mean - sd, ymax = mean + sd),
-                  size = 1)+
-  theme_bw(base_size = 15)+
-  labs(y = "固\n有\nベ\nク\nト\nル\n中\n心\n性", x = "")+
-  theme(aspect.ratio = 1,
-        axis.text.x =  element_text(family = "Times New Roman"),
-        axis.title.y = element_text(family = "Yu Mincho",
-                                    angle = 0,
-                                    vjust = 0.5),
-        legend.text = element_text(family = "Yu Mincho"),
-        axis.text.y = element_text(family = "Times New Roman")) -> p_eigen21_TY
+mat_RG_nm_IT %>% 
+  data.frame() %>% 
+  rownames_to_column(var = " ")
+```
+<br/>  
 
-p_eigen21_TY
+## ネットワーク指標の算出  
+### 交尾期(非発情・2018~2019)  
+#### TYがいる日  
+```{r}
+ID_an1_TY <- data.frame(ID = colnames(mat_RG_an1_TY))
 
-# ggsave("figure/p_eigen21_TY.png", p_eigen21_TY, dpi = 600, width = 90, height = 90, units = "mm")
+## 作成
+metrics_an1_TY_eigen <- met.eigen(mat_RG_an1_TY,
+                                  binary = FALSE,
+                                  sym = TRUE,
+                                  df = ID_an1_TY,
+                                  dfid = 1)
+
+metrics_an1_TY_strength <- met.strength(mat_RG_an1_TY,
+                                        df = metrics_an1_TY_eigen,
+                                        dfid = 1)
+
+metrics_an1_TY_between <- met.betweenness(mat_RG_an1_TY,
+                                          binary = FALSE,
+                                          sym = TRUE,
+                                          df = metrics_an1_TY_strength,
+                                          dfid = 1)
+
+## TYとの親密度などの情報を結合  
+metrics_an1_TY <- metrics_an1_TY_between %>% 
+  left_join(CSI_TY_combined %>% 
+              select(subject, CSI_TY),
+            by = c("ID" = "subject")) %>% 
+  left_join(att %>% 
+              filter(study_period == "m18") %>% 
+              select(femaleID, age, rank),
+            by = c("ID" = "femaleID"))
 ```
 
-**TYのいない日**  
-KRはそこそこ高い。KMは0。   
+算出した指標はは以下の通り。  
 ```{r}
-ID21_notTY <- data.frame(ID = c(adult21,"LK","KR","KM"))
+metrics_an1_TY
+```
+<br/>  
 
-met.eigen(matRG_2021_notTY,
-          df = ID21_notTY ,
-          dfid = 1) %>% 
-  drop_na() -> ID21_notTY_b
+#### ITがいる日  
+```{r}
+ID_an1_IT <- data.frame(ID = colnames(mat_RG_an1_IT))
 
-ID21_notTY_b
+## 作成
+metrics_an1_IT_eigen <- met.eigen(mat_RG_an1_IT,
+                                  binary = FALSE,
+                                  sym = TRUE,
+                                  df = ID_an1_IT,
+                                  dfid = 1)
+
+metrics_an1_IT_strength <- met.strength(mat_RG_an1_IT,
+                                        df = metrics_an1_IT_eigen,
+                                        dfid = 1)
+
+metrics_an1_IT_between <- met.betweenness(mat_RG_an1_IT,
+                                          binary = FALSE,
+                                          sym = TRUE,
+                                          df = metrics_an1_IT_strength,
+                                          dfid = 1)
+
+## ITとの親密度などの情報を結合  
+metrics_an1_IT <- metrics_an1_IT_between %>% 
+  left_join(CSI_IT_combined %>% 
+              select(subject, CSI_IT),
+            by = c("ID" = "subject")) %>% 
+  left_join(att %>% 
+              filter(study_period == "m18") %>% 
+              select(femaleID, age, rank),
+            by = c("ID" = "femaleID"))
 ```
 
+算出した指標はは以下の通り。  
 ```{r}
-ID21_notTY_b %>% 
-  mutate(mf = ifelse(ID %in% adult21,"メス",ID)) %>% 
-  group_by(mf) %>% 
-  summarise(mean = mean(eigen),
-            sd = sd(eigen)) %>%
-  ungroup() %>% 
-  replace_na(list(sd = 0)) %>% 
-  mutate(mf = fct_relevel(mf,"TY","LK","KR","KM","メス")) %>% 
-  ggplot(aes(x = mf))+
-  geom_pointrange(aes(y = mean, ymin = mean - sd, ymax = mean + sd),
-                  size = 1)+
-  theme_bw(base_size = 15)+
-  labs(y = "固\n有\nベ\nク\nト\nル\n中\n心\n性", x = "")+
-  theme(aspect.ratio = 1,
-        axis.text.x =  element_text(family = "Times New Roman"),
-        axis.title.y = element_text(family = "Yu Mincho",
-                                    angle = 0,
-                                    vjust = 0.5),
-        legend.text = element_text(family = "Yu Mincho"),
-        axis.text.y = element_text(family = "Times New Roman")) -> p_eigen21_notTY
+metrics_an1_IT
+```
+<br/>  
 
-p_eigen21_notTY
+### 交尾期(非発情・2020~2021)  
+#### TYがいる日  
+```{r}
+ID_an2_TY <- data.frame(ID = colnames(mat_RG_an2_TY))
 
-# ggsave("figure/p_eigen21_notTY.png", p_eigen21_notTY, dpi = 600, width = 90, height = 90, units = "mm")
+## 作成
+metrics_an2_TY_eigen <- met.eigen(mat_RG_an2_TY,
+                                  binary = FALSE,
+                                  sym = TRUE,
+                                  df = ID_an2_TY,
+                                  dfid = 1)
+
+metrics_an2_TY_strength <- met.strength(mat_RG_an2_TY,
+                                        df = metrics_an2_TY_eigen,
+                                        dfid = 1)
+
+metrics_an2_TY_between <- met.betweenness(mat_RG_an2_TY,
+                                          binary = FALSE,
+                                          sym = TRUE,
+                                          df = metrics_an2_TY_strength,
+                                          dfid = 1)
+
+## TYとの親密度などの情報を結合  
+metrics_an2_TY <- metrics_an2_TY_between %>% 
+  left_join(CSI_TY_combined %>% 
+              select(subject, CSI_TY),
+            by = c("ID" = "subject")) %>% 
+  left_join(att %>% 
+              filter(study_period == "m18") %>% 
+              select(femaleID, age, rank),
+            by = c("ID" = "femaleID"))
 ```
 
-#### ネットワーク図の描画  
+算出した指標はは以下の通り。  
 ```{r}
-matRG_2021_TY %>% 
-  as_tbl_graph(directed = FALSE) %>%
-  ## `tbl_graph`に重み付き中心性の情報を追加
-  mutate(eigen = ID21_TY_b$eigen) %>% 
-  ggraph(layout = "nicely")+
-  scale_size(range = c(6,13))+
-  geom_edge_link(aes(width = weight),color = "grey65",
-                 end_cap = circle(0.5,"cm"),
-                 start_cap = circle(0.5,"cm"))+
-  geom_node_point(aes(size = eigen), shape = 16, color = "black")+
-  geom_node_text(aes(label = name), color = "white")+
-  scale_edge_width(range = c(0.5,2))+
-  theme_graph() -> p_RG21_TY
+metrics_an2_TY
+```
+<br/>  
 
-p_RG21_TY
+#### ITがいる日  
+```{r}
+ID_an2_IT <- data.frame(ID = colnames(mat_RG_an2_IT))
 
-# ggsave("figure/p_RG21_TY.png", p_RG21_TY, height = 160,width =160, dpi = 600, units= "mm")
+## 作成
+metrics_an2_IT_eigen <- met.eigen(mat_RG_an2_IT,
+                                  binary = FALSE,
+                                  sym = TRUE,
+                                  df = ID_an2_IT,
+                                  dfid = 1)
+
+metrics_an2_IT_strength <- met.strength(mat_RG_an2_IT,
+                                        df = metrics_an2_IT_eigen,
+                                        dfid = 1)
+
+metrics_an2_IT_between <- met.betweenness(mat_RG_an2_IT,
+                                          binary = FALSE,
+                                          sym = TRUE,
+                                          df = metrics_an2_IT_strength,
+                                          dfid = 1)
+
+## ITとの親密度などの情報を結合  
+metrics_an2_IT <- metrics_an2_IT_between %>% 
+  left_join(CSI_IT_combined %>% 
+              select(subject, CSI_IT),
+            by = c("ID" = "subject")) %>% 
+  left_join(att %>% 
+              filter(study_period == "m18") %>% 
+              select(femaleID, age, rank),
+            by = c("ID" = "femaleID"))
 ```
 
+算出した指標はは以下の通り。  
 ```{r}
-matRG_2021_notTY %>% 
-  as_tbl_graph(directed = FALSE) %>%
-  ## `tbl_graph`に重み付き中心性の情報を追加
-  mutate(eigen = ID21_notTY_b$eigen) %>% 
-  ggraph(layout = "nicely")+
-  scale_size(range = c(6,13))+
-  geom_edge_link(aes(width = weight),color = "grey65",
-                 end_cap = circle(0.5,"cm"),
-                 start_cap = circle(0.5,"cm"))+
-  geom_node_point(aes(size = eigen), shape = 16, color = "black")+
-  geom_node_text(aes(label = name), color = "white")+
-  scale_edge_width(range = c(0.5,2))+
-  theme_graph() -> p_RG21_notTY
+metrics_an2_IT
+```
+<br/>  
 
-p_RG21_notTY
+### 非交尾期   
+#### TYがいる日  
+```{r}
+ID_nm_TY <- data.frame(ID = colnames(mat_RG_nm_TY))
 
-# ggsave("figure/p_RG21_notTY.png", p_RG21_notTY, height = 160,width =160, dpi = 600, units= "mm")
+## 作成
+metrics_nm_TY_eigen <- met.eigen(mat_RG_nm_TY,
+                                  binary = FALSE,
+                                  sym = TRUE,
+                                  df = ID_nm_TY,
+                                  dfid = 1)
+
+metrics_nm_TY_strength <- met.strength(mat_RG_nm_TY,
+                                        df = metrics_nm_TY_eigen,
+                                        dfid = 1)
+
+metrics_nm_TY_between <- met.betweenness(mat_RG_nm_TY,
+                                          binary = FALSE,
+                                          sym = TRUE,
+                                          df = metrics_nm_TY_strength,
+                                          dfid = 1)
+
+## TYとの親密度などの情報を結合  
+metrics_nm_TY <- metrics_nm_TY_between %>% 
+  left_join(CSI_TY_combined %>% 
+              select(subject, CSI_TY),
+            by = c("ID" = "subject")) %>% 
+  left_join(att %>% 
+              filter(study_period == "m18") %>% 
+              select(femaleID, age, rank),
+            by = c("ID" = "femaleID"))
 ```
 
-#### 下位構造の検出  
-**TYがいる日**  
+算出した指標はは以下の通り。  
 ```{r}
-graph21_TY <- graph_from_adjacency_matrix(matRG_2021_TY,
+metrics_nm_TY
+```
+<br/>  
+
+#### ITがいる日  
+```{r}
+ID_nm_IT <- data.frame(ID = colnames(mat_RG_nm_IT))
+
+## 作成
+metrics_nm_IT_eigen <- met.eigen(mat_RG_nm_IT,
+                                  binary = FALSE,
+                                  sym = TRUE,
+                                  df = ID_nm_IT,
+                                  dfid = 1)
+
+metrics_nm_IT_strength <- met.strength(mat_RG_nm_IT,
+                                        df = metrics_nm_IT_eigen,
+                                        dfid = 1)
+
+metrics_nm_IT_between <- met.betweenness(mat_RG_nm_IT,
+                                          binary = FALSE,
+                                          sym = TRUE,
+                                          df = metrics_nm_IT_strength,
+                                          dfid = 1)
+
+## ITとの親密度などの情報を結合  
+metrics_nm_IT <- metrics_nm_IT_between %>% 
+  left_join(CSI_IT_combined %>% 
+              select(subject, CSI_IT),
+            by = c("ID" = "subject")) %>% 
+  left_join(att %>% 
+              filter(study_period == "m18") %>% 
+              select(femaleID, age, rank),
+            by = c("ID" = "femaleID"))
+```
+
+算出した指標はは以下の通り。  
+```{r}
+metrics_nm_IT
+```
+<br/>  
+
+## ネットワークの描画  
+それでは、ネットワークを描画していきます。  
+
+### 交尾期(非発情・2018~2019)  
+#### TYがいる日  
+```{r}
+set.seed(123)
+
+mat_RG_an1_TY %>% 
+  as_tbl_graph(directed = FALSE) %>% 
+  left_join(metrics_an1_TY,
+            by = c("name" = "ID")) %>% 
+  mutate(sex = if_else(name %in% c("TY", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  ggraph(layout = "nicely") +
+  geom_node_point(aes(size = eigen,
+                      fill = sex),
+                  shape = 21,
+                  color = "grey23")+
+  geom_edge_link(start_cap = circle(0.6,"cm"),
+                 end_cap = circle(0.6,"cm"),
+                 color = "grey55",
+                 aes(width = weight))+
+  scale_edge_width_identity(guide = "legend") +
+  scale_size(range = c(8, 15),
+             breaks = seq(0.2, 1, 0.2),
+             limits = c(0.2, 1)) +
+  geom_node_text(aes(label = name,
+                     color = sex)) +
+  theme_graph() +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_color_manual(values = c("white", "black")) +
+  theme(aspect.ratio = 0.9)+
+  scale_x_continuous(expand = c(0.1,0.1)) +
+  scale_y_continuous(expand = c(0.12,0.11)) +
+  labs(size = "Eigenvector centrality", color = "", fill = "",
+       linewidth = "SRI",
+       title = "Network when *TY* was present (MS18 + MS19)") +
+  guides(color = "none", fill = "none") +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman")) -> net_RG_an1_TY
+
+net_RG_an1_TY
+
+ggsave("figures/net_RG_an1_TY.png", net_RG_an1_TY,
+       width = 200, height = 200, units = "mm", dpi = 1000)
+```
+<br/>  
+
+#### ITがいる日  
+```{r}
+set.seed(123)
+
+mat_RG_an1_IT %>% 
+  as_tbl_graph(directed = FALSE) %>% 
+  left_join(metrics_an1_IT,
+            by = c("name" = "ID")) %>% 
+  mutate(sex = if_else(name %in% c("IT", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  ggraph(layout = "nicely") +
+  geom_node_point(aes(size = eigen,
+                      fill = sex),
+                  shape = 21,
+                  color = "grey23")+
+  geom_edge_link(start_cap = circle(0.6,"cm"),
+                 end_cap = circle(0.6,"cm"),
+                 color = "grey55",
+                 aes(width = weight))+
+  scale_edge_width_identity(guide = "legend") +
+  scale_size(range = c(8, 15),
+             breaks = seq(0.2, 1, 0.2)) +
+  geom_node_text(aes(label = name,
+                     color = sex)) +
+  theme_graph() +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_color_manual(values = c("white", "black")) +
+  theme(aspect.ratio = 0.9)+
+  scale_x_continuous(expand = c(0.1,0.1)) +
+  scale_y_continuous(expand = c(0.12,0.11)) +
+  labs(size = "Eigenvector centrality", color = "", fill = "",
+       linewidth = "SRI",
+       title = "Network when *IT* was present (MS18 + MS19)") +
+  guides(color = "none", fill = "none") +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman")) -> net_RG_an1_IT
+
+net_RG_an1_IT
+
+ggsave("figures/net_RG_an1_IT.png", net_RG_an1_IT,
+       width = 200, height = 200, units = "mm", dpi = 1000)
+```
+<br/>  
+
+### 交尾期(非発情・2020~2021)  
+#### TYがいる日  
+```{r}
+set.seed(123)
+
+mat_RG_an2_TY %>% 
+  as_tbl_graph(directed = FALSE) %>% 
+  left_join(metrics_an2_TY,
+            by = c("name" = "ID")) %>% 
+  mutate(sex = if_else(name %in% c("TY", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  ggraph(layout = "nicely") +
+  geom_node_point(aes(size = eigen,
+                      fill = sex),
+                  shape = 21,
+                  color = "grey23")+
+  geom_edge_link(start_cap = circle(0.6,"cm"),
+                 end_cap = circle(0.6,"cm"),
+                 color = "grey55",
+                 aes(width = weight))+
+  scale_edge_width_identity(guide = "legend") +
+  scale_size(range = c(8, 15),
+             breaks = seq(0.2, 1, 0.2)) +
+  geom_node_text(aes(label = name,
+                     color = sex)) +
+  theme_graph() +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_color_manual(values = c("white", "black")) +
+  theme(aspect.ratio = 0.9)+
+  scale_x_continuous(expand = c(0.1,0.1)) +
+  scale_y_continuous(expand = c(0.12,0.11)) +
+  labs(size = "Eigenvector centrality", color = "", fill = "",
+       linewidth = "SRI",
+       title = "Network when *TY* was present (MS20 + MS21)") +
+  guides(color = "none", fill = "none") +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman")) -> net_RG_an2_TY
+
+net_RG_an2_TY
+
+ggsave("figures/net_RG_an2_TY.png", net_RG_an2_TY,
+       width = 200, height = 200, units = "mm", dpi = 1000)
+```
+<br/>  
+
+#### ITがいる日  
+```{r}
+set.seed(123)
+
+mat_RG_an2_IT %>% 
+  as_tbl_graph(directed = FALSE) %>% 
+  left_join(metrics_an2_IT,
+            by = c("name" = "ID")) %>% 
+  mutate(sex = if_else(name %in% c("IT", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  ggraph(layout = "nicely") +
+  geom_node_point(aes(size = eigen,
+                      fill = sex),
+                  shape = 21,
+                  color = "grey23")+
+  geom_edge_link(start_cap = circle(0.6,"cm"),
+                 end_cap = circle(0.6,"cm"),
+                 color = "grey55",
+                 aes(width = weight))+
+  scale_edge_width_identity(guide = "legend") +
+  scale_size(range = c(8, 15),
+             breaks = seq(0.2, 1, 0.2)) +
+  geom_node_text(aes(label = name,
+                     color = sex)) +
+  theme_graph() +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_color_manual(values = c("white", "black")) +
+  theme(aspect.ratio = 0.9)+
+  scale_x_continuous(expand = c(0.1,0.1)) +
+  scale_y_continuous(expand = c(0.12,0.11)) +
+  labs(size = "Eigenvector centrality", color = "", fill = "",
+       linewidth = "SRI",
+       title = "Network when *IT* was present (MS21)") +
+  guides(color = "none", fill = "none") +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman")) -> net_RG_an2_IT
+
+net_RG_an2_IT
+
+ggsave("figures/net_RG_an2_IT.png", net_RG_an2_IT,
+       width = 200, height = 200, units = "mm", dpi = 1000)
+```
+<br/>  
+
+### 非交尾期   
+#### TYがいる日  
+```{r}
+set.seed(123)
+
+mat_RG_nm_TY %>% 
+  as_tbl_graph(directed = FALSE) %>% 
+  left_join(metrics_nm_TY,
+            by = c("name" = "ID")) %>% 
+  mutate(sex = if_else(name %in% c("TY", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  ggraph(layout = "nicely") +
+  geom_node_point(aes(size = eigen,
+                      fill = sex),
+                  shape = 21,
+                  color = "grey23")+
+  geom_edge_link(start_cap = circle(0.6,"cm"),
+                 end_cap = circle(0.6,"cm"),
+                 color = "grey55",
+                 aes(width = weight))+
+  scale_edge_width_identity(guide = "legend") +
+  scale_size(range = c(8, 15),
+             breaks = seq(0.2, 1, 0.2),
+             limits = c(0.2, 1)) +
+  geom_node_text(aes(label = name,
+                     color = sex)) +
+  theme_graph() +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_color_manual(values = c("white", "black")) +
+  theme(aspect.ratio = 0.9)+
+  scale_x_continuous(expand = c(0.1,0.1)) +
+  scale_y_continuous(expand = c(0.12,0.11)) +
+  labs(size = "Eigenvector centrality", color = "", fill = "",
+       linewidth = "SRI",
+       title = "Network when *TY* was present (NMS19 + NMS21 + NMS22)") +
+  guides(color = "none", fill = "none") +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman")) -> net_RG_nm_TY
+
+net_RG_nm_TY
+
+ggsave("figures/net_RG_nm_TY.png", net_RG_nm_TY,
+       width = 200, height = 200, units = "mm", dpi = 1000)
+```
+<br/>  
+
+#### ITがいる日  
+```{r}
+set.seed(123)
+
+mat_RG_nm_IT %>% 
+  as_tbl_graph(directed = FALSE) %>% 
+  left_join(metrics_nm_IT,
+            by = c("name" = "ID")) %>% 
+  mutate(sex = if_else(name %in% c("IT", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  ggraph(layout = "nicely") +
+  geom_node_point(aes(size = eigen,
+                      fill = sex),
+                  shape = 21,
+                  color = "grey23")+
+  geom_edge_link(start_cap = circle(0.6,"cm"),
+                 end_cap = circle(0.6,"cm"),
+                 color = "grey55",
+                 aes(width = weight))+
+  scale_edge_width_identity(guide = "legend") +
+  scale_size(range = c(8, 15),
+             breaks = seq(0.2, 1, 0.2)) +
+  geom_node_text(aes(label = name,
+                     color = sex)) +
+  theme_graph() +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_color_manual(values = c("white", "black")) +
+  theme(aspect.ratio = 0.9)+
+  scale_x_continuous(expand = c(0.1,0.1)) +
+  scale_y_continuous(expand = c(0.12,0.11)) +
+  labs(size = "Eigenvector centrality", color = "", fill = "",
+       linewidth = "SRI",
+       title = "Network when *IT* was present (NMS19 + NMS21)") +
+  guides(color = "none", fill = "none") +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman")) -> net_RG_nm_IT
+
+net_RG_nm_IT
+
+ggsave("figures/net_RG_nm_IT.png", net_RG_nm_IT,
+       width = 200, height = 200, units = "mm", dpi = 1000)
+```
+<br/>  
+
+## ネットワーク指標についての作図  
+続いて、ネットワーク指標についてのグラフを*TY*、*IT*それぞれについて作成します。  
+
+### TYについて  
+#### データの作成  
+まず、作図のためにネットワーク指標を結合します。  
+```{r}
+metrics_all_TY <- metrics_an1_TY %>% 
+  mutate(study_period = "MS18 + MS19") %>% 
+  bind_rows(metrics_an2_TY %>% 
+              mutate(study_period = "MS20 + MS21")) %>% 
+  bind_rows(metrics_nm_TY %>% 
+              mutate(study_period = "NMS")) 
+```
+
+#### 作図  
+それでは、作図します。  
+```{r}
+set.seed(1121)
+
+metrics_all_TY %>% 
+  mutate(sex = if_else(ID %in% c("TY", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  pivot_longer(col = c(eigen, norm.betweenness),
+               names_to = "type",
+               values_to = "centrality") %>% 
+  ggplot(aes(x = study_period, y = centrality)) +
+  geom_point(aes(fill = sex, size = sex),
+             position = position_jitter(width = 0.1),
+             shape = 21,
+             alpha = 0.7) +
+  geom_text_repel(data = . %>% filter(sex == "Male"),
+            aes(label = ID),
+            fontface = "italic",
+            size = 3,
+            family = "Times New Roman",
+            segment.size = 0,
+            nudge_y = 0.05,
+            nudge_x = 0.2) +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_size_manual(values = c(2, 3)) +
+  facet_rep_wrap(~ type,
+                 scales = "free",
+                 labeller = as_labeller(c("eigen" = "Eigenvector centrality",
+                                          "norm.betweenness" = "Betweenness"))) +
+  theme_bw(base_size = 12) +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman"),
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0),
+        aspect.ratio = 0.8) +
+  labs(title = "Network when *TY* was present", fill = "", size = "",
+       x = "", y = "Centrality") -> p_metrics_TY
+
+p_metrics_TY
+
+ggsave("figures/p_metrics_TY.png", p_metrics_TY,
+       width = 200, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  
+
+### TYについて  
+#### データの作成  
+まず、作図のためにネットワーク指標を結合します。  
+```{r}
+metrics_all_IT <- metrics_an1_IT %>% 
+  mutate(study_period = "MS18 + MS19") %>% 
+  bind_rows(metrics_an2_IT %>% 
+              mutate(study_period = "MS20")) %>% 
+  bind_rows(metrics_nm_IT %>% 
+              mutate(study_period = "NMS")) 
+```
+
+#### 作図  
+それでは、作図します。  
+```{r}
+set.seed(1121)
+
+metrics_all_IT %>% 
+  mutate(sex = if_else(ID %in% c("IT", "KR", "LK"),
+                       "Male", "Female")) %>% 
+  pivot_longer(col = c(eigen, norm.betweenness),
+               names_to = "type",
+               values_to = "centrality") %>% 
+  ggplot(aes(x = study_period, y = centrality)) +
+  geom_point(aes(fill = sex, size = sex),
+             position = position_jitter(width = 0.1),
+             shape = 21,
+             alpha = 0.7) +
+  geom_text_repel(data = . %>% filter(sex == "Male"),
+            aes(label = ID),
+            fontface = "italic",
+            size = 3,
+            family = "Times New Roman",
+            segment.size = 0,
+            nudge_y = 0.05,
+            nudge_x = 0.1) +
+  scale_fill_manual(values = c("grey20", "white"))+
+  scale_size_manual(values = c(2, 3)) +
+  facet_rep_wrap(~ type,
+                 scales = "free",
+                 labeller = as_labeller(c("eigen" = "Eigenvector centrality",
+                                          "norm.betweenness" = "Betweenness"))) +
+  theme_bw(base_size = 12) +
+  theme(text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman"),
+        strip.background = element_blank(),
+        strip.text = element_text(hjust = 0),
+        aspect.ratio = 0.8) +
+  labs(title = "Network when *IT* was present", fill = "", size = "",
+       x = "", y = "Centrality") -> p_metrics_IT
+
+p_metrics_IT
+
+ggsave("figures/p_metrics_IT.png", p_metrics_IT,
+       width = 200, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  
+
+## 統計的分析  
+### オスがいる日といない日の比較  
+オスがいる日といない日でネットワークがどのように異なるかを調べます。具体的には、モジュラリティ―の比較を行います。    
+
+#### オスがいない日のネットワークの作成  
+まずは、オスがいない日のデータのみを用いてネットワークを作成します。  
+
+##### 交尾期(非発情・2018~2019)  
+###### TYがいない日  
+```{r}
+focal_RG_an1_noTY <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m18", "m19")) %>% 
+  filter(TY_presence == 0) %>% 
+  select(one_of(female_1st), KR, LK)
+
+## 作成
+mat_RG_an1_noTY <- get_network(focal_RG_an1_noTY,
+                               data_format = "GBI",
+                               association_index = "SRI")
+```
+
+隣接行列は以下の通り。  
+```{r}
+mat_RG_an1_noTY %>% 
+  data.frame() %>% 
+  rownames_to_column(var = " ")
+```
+<br/>  
+
+###### ITがいる日  
+```{r}
+focal_RG_an1_noIT <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m18", "m19")) %>% 
+  filter(IT_presence == 0) %>% 
+  select(one_of(female_1st), KR, LK)
+
+## 作成
+mat_RG_an1_noIT <- get_network(focal_RG_an1_noIT,
+                             data_format = "GBI",
+                             association_index = "SRI")
+```
+
+隣接行列は以下の通り。  
+```{r}
+mat_RG_an1_noIT %>% 
+  data.frame() %>% 
+  rownames_to_column(var = " ")
+```
+<br/>  
+
+##### 交尾期(非発情・2020~2021)  
+###### TYがいる日  
+```{r}
+focal_RG_an2_noTY <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m20", "m21")) %>% 
+  filter(TY_presence == 0) %>% 
+  select(one_of(female_2nd), KR)
+
+## 作成
+mat_RG_an2_noTY <- get_network(focal_RG_an2_noTY,
+                             data_format = "GBI",
+                             association_index = "SRI")
+```
+
+隣接行列は以下の通り。  
+```{r}
+mat_RG_an2_noTY %>% 
+  data.frame() %>% 
+  rownames_to_column(var = " ")
+```
+<br/>  
+
+###### ITがいる日  
+```{r}
+focal_RG_an2_noIT <- focal_RG %>% 
+  filter(rs2 == 0) %>% 
+  filter(study_period %in% c("m20", "m21")) %>% 
+  filter(IT_presence == 0) %>% 
+  select(one_of(female_2nd), KR)
+
+## 作成
+mat_RG_an2_noIT <- get_network(focal_RG_an2_noIT,
+                             data_format = "GBI",
+                             association_index = "SRI")
+```
+
+隣接行列は以下の通り。  
+```{r}
+mat_RG_an1_noIT %>% 
+  data.frame() %>% 
+  rownames_to_column(var = " ")
+```
+<br/>  
+
+##### 非交尾期   
+###### TYがいる日  
+```{r}
+focal_RG_nm_noTY <- focal_RG %>% 
+  filter(study_period %in% c("nm19", "nm20", "nm21", "nm22")) %>% 
+  filter(TY_presence == 0) %>% 
+  select(one_of(female_1st), KR, -Tam)
+
+## 作成
+mat_RG_nm_noTY <- get_network(focal_RG_nm_noTY,
+                            data_format = "GBI",
+                            association_index = "SRI")
+```
+
+隣接行列は以下の通り。  
+```{r}
+mat_RG_nm_noTY %>% 
+  data.frame() %>% 
+  rownames_to_column(var = " ")
+```
+<br/>  
+
+###### ITがいない日  
+```{r}
+focal_RG_nm_noIT <- focal_RG %>% 
+  filter(study_period %in% c("nm19", "nm20", "nm21")) %>% 
+  filter(IT_presence == 0) %>% 
+  select(one_of(female_1st), KR, -Tam)
+
+## 作成
+mat_RG_nm_noIT <- get_network(focal_RG_nm_noIT,
+                            data_format = "GBI",
+                            association_index = "SRI")
+```
+
+隣接行列は以下の通り。  
+```{r}
+mat_RG_nm_noIT %>% 
+  data.frame() %>% 
+  rownames_to_column(var = " ")
+```
+<br/>  
+
+#### モジュラリティ―の算出  
+##### TY・交尾期(非発情・2018~2019)  
+###### TYがいる日   
+モジュラリティ―を算出します。  
+```{r}
+graph_RG_an1_TY <- graph_from_adjacency_matrix(mat_RG_an1_TY,
                                            ## 有向グラフなら "directed"
                                            mode= "undirected", 
                                            ## 重みなしなら NULL
                                            weighted = TRUE) 
 
-cluster_optimal(graph21_TY,
-                weights = E(graph21_TY)$weight) -> cluster_RG21_TY
+cluster_optimal(graph_RG_an1_TY,
+                weights = E(graph_RG_an1_TY)$weight) -> cluster_RG_an1_TY
 ```
 
 クラスターのグループ分けは以下の通り。   
-3つに分かれる。  
 ```{r}
-cluster_RG21_TY
+cluster_RG_an1_TY
 ```
 
-モジュラリティは以下の通り。モジュラリティ―は2つに分ける場合は-0.5~0.5の間をとる。0.09なので小さい。     
+モジュラリティは以下の通り。  
 ```{r}
-modularity(cluster_RG21_TY, directed = FALSE, weights = NULL)
+modularity(cluster_RG_an1_TY, directed = FALSE, weights = NULL)
 ```
+<br/>  
 
-**TYがいない日**  
+###### TYがいない日   
 ```{r}
-graph21_notTY <- graph_from_adjacency_matrix(matRG_2021_notTY,
+graph_RG_an1_noTY <- graph_from_adjacency_matrix(mat_RG_an1_noTY,
                                            ## 有向グラフなら "directed"
                                            mode= "undirected", 
                                            ## 重みなしなら NULL
                                            weighted = TRUE) 
 
-cluster_optimal(graph21_notTY,
-                weights = E(graph21_notTY)$weight) -> cluster_RG21_notTY
+cluster_optimal(graph_RG_an1_noTY,
+                weights = E(graph_RG_an1_noTY)$weight) -> cluster_RG_an1_noTY
 ```
 
 クラスターのグループ分けは以下の通り。   
-3つに分かれる。  
 ```{r}
-cluster_RG21_notTY
+cluster_RG_an1_noTY
 ```
 
-モジュラリティは以下の通り。モジュラリティ―は6つに分ける場合は-0.5~0.5の間をとる。0.33なので、かなり大きい。  
+モジュラリティは以下の通り。
 ```{r}
-modularity(cluster_RG21_notTY, directed = FALSE, weights = NULL)
+modularity(cluster_RG_an1_noTY, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+##### TY・交尾期(非発情・2020~2021)  
+###### TYがいる日   
+モジュラリティ―を算出します。  
+```{r}
+graph_RG_an2_TY <- graph_from_adjacency_matrix(mat_RG_an2_TY,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_an2_TY,
+                weights = E(graph_RG_an2_TY)$weight) -> cluster_RG_an2_TY
 ```
 
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_an2_TY
+```
+
+モジュラリティは以下の通り。  
+```{r}
+modularity(cluster_RG_an2_TY, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+###### TYがいない日   
+```{r}
+graph_RG_an2_noTY <- graph_from_adjacency_matrix(mat_RG_an2_noTY,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_an2_noTY,
+                weights = E(graph_RG_an2_noTY)$weight) -> cluster_RG_an2_noTY
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_an2_noTY
+```
+
+モジュラリティは以下の通り。
+```{r}
+modularity(cluster_RG_an2_noTY, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+##### TY・非交尾期  
+###### TYがいる日   
+モジュラリティ―を算出します。  
+```{r}
+graph_RG_nm_TY <- graph_from_adjacency_matrix(mat_RG_nm_TY,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_nm_TY,
+                weights = E(graph_RG_nm_TY)$weight) -> cluster_RG_nm_TY
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_nm_TY
+```
+
+モジュラリティは以下の通り。  
+```{r}
+modularity(cluster_RG_nm_TY, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+###### TYがいない日   
+```{r}
+graph_RG_nm_noTY <- graph_from_adjacency_matrix(mat_RG_nm_noTY,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_nm_noTY,
+                weights = E(graph_RG_nm_noTY)$weight) -> cluster_RG_nm_noTY
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_nm_noTY
+```
+
+モジュラリティは以下の通り。
+```{r}
+modularity(cluster_RG_nm_noTY, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+##### IT・交尾期(非発情・2018~2019)  
+###### ITがいる日   
+モジュラリティ―を算出します。  
+```{r}
+graph_RG_an1_IT <- graph_from_adjacency_matrix(mat_RG_an1_IT,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_an1_IT,
+                weights = E(graph_RG_an1_IT)$weight) -> cluster_RG_an1_IT
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_an1_IT
+```
+
+モジュラリティは以下の通り。  
+```{r}
+modularity(cluster_RG_an1_IT, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+###### ITがいない日   
+```{r}
+graph_RG_an1_noIT <- graph_from_adjacency_matrix(mat_RG_an1_noIT,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_an1_noIT,
+                weights = E(graph_RG_an1_noIT)$weight) -> cluster_RG_an1_noIT
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_an1_noIT
+```
+
+モジュラリティは以下の通り。
+```{r}
+modularity(cluster_RG_an1_noIT, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+##### IT・交尾期(非発情・2020~2021)  
+###### ITがいる日   
+モジュラリティ―を算出します。  
+```{r}
+graph_RG_an2_IT <- graph_from_adjacency_matrix(mat_RG_an2_IT,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_an2_IT,
+                weights = E(graph_RG_an2_IT)$weight) -> cluster_RG_an2_IT
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_an2_IT
+```
+
+モジュラリティは以下の通り。  
+```{r}
+modularity(cluster_RG_an2_IT, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+###### ITがいない日   
+```{r}
+graph_RG_an2_noIT <- graph_from_adjacency_matrix(mat_RG_an2_noIT,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_an2_noIT,
+                weights = E(graph_RG_an2_noIT)$weight) -> cluster_RG_an2_noIT
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_an2_noIT
+```
+
+モジュラリティは以下の通り。
+```{r}
+modularity(cluster_RG_an2_noIT, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+##### IT・非交尾期  
+###### TYがいる日   
+モジュラリティ―を算出します。  
+```{r}
+graph_RG_nm_IT <- graph_from_adjacency_matrix(mat_RG_nm_IT,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_nm_IT,
+                weights = E(graph_RG_nm_IT)$weight) -> cluster_RG_nm_IT
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_nm_IT
+```
+
+モジュラリティは以下の通り。  
+```{r}
+modularity(cluster_RG_nm_IT, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+###### ITがいない日   
+```{r}
+graph_RG_nm_noIT <- graph_from_adjacency_matrix(mat_RG_nm_noIT,
+                                           ## 有向グラフなら "directed"
+                                           mode= "undirected", 
+                                           ## 重みなしなら NULL
+                                           weighted = TRUE) 
+
+cluster_optimal(graph_RG_nm_noIT,
+                weights = E(graph_RG_nm_noIT)$weight) -> cluster_RG_nm_noIT
+```
+
+クラスターのグループ分けは以下の通り。   
+```{r}
+cluster_RG_nm_noIT
+```
+
+モジュラリティは以下の通り。
+```{r}
+modularity(cluster_RG_nm_noIT, directed = FALSE, weights = NULL)
+```
+<br/>  
+
+### オスとのCSIと中心性の関連  
+続いて、休息集団ネットワーク内のメスの固有ベクトル中心性とオスとの親密度の関連について調べます。    
+
+#### 交尾期(非発情・2018~2019)  
+##### TYがいる日  
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+```{r}
+## データの作成 
+### 血縁個体数の算出  
+no_kin_an1_TY <- tidyr::crossing(femaleID = metrics_an1_TY$ID,
+         femaleID2 = metrics_an1_TY$ID) %>% 
+  filter(!femaleID %in% c("TY", "IT", "KR", "LK"),
+         !femaleID2 %in% c("TY", "IT", "KR", "LK")) %>% 
+  left_join(kin) %>% 
+  drop_na(kin) %>% 
+  group_by(femaleID) %>% 
+  summarise(no_kin = sum(kin >= 0.0625)) %>% 
+  ungroup()
+
+### データの整形と結合
+glmdata_an1_TY <- metrics_all_TY %>% 
+  filter(study_period == "MS18 + MS19") %>% 
+  arrange(rank) %>% 
+  mutate(rank = 1:n()) %>% 
+  select(ID, eigen, rank, CSI_TY) %>% 
+  left_join(no_kin_an1_TY,
+            by = c("ID" = "femaleID"))
+
+## モデルの実行  
+m_an1_TY_eigen <- brm(data = glmdata_an1_TY,
+                      formula = eigen ~ CSI_TY + no_kin + rank,
+                      family = zero_one_inflated_beta(),
+                      prior = c(prior(student_t(4,0,15), class = "b"),
+                                prior(student_t(4,0,15), class = "Intercept")),
+                      silent = 2,
+                      refresh = 0,
+                      backend = "cmdstanr",
+                      file = "model/m_an1_TY_eigen")
+```
+
+結果は以下の通りです。  
+```{r}
+model_parameters(m_an1_TY_eigen)
+```
+<br/>  
+
+続いて、500回ノードラベルパーミュテーションを行い、それぞれの係数を取得します。  
+```{r}
+# b_CSI_TY_an1 <- rep(0, 500)
+# b_no_kin_an1_TY <- rep(0, 500)
+# b_rank_an1_TY <- rep(0, 500)
+# 
+# set.seed(123)
+# pb = txtProgressBar(min = 1, max = 500, style = 3)
+# 
+# for(i in 1:500){
+#   setTxtProgressBar(pb, i)
+#   random_net_an1_TY <- rmperm(mat_RG_an1_TY)
+#   colnames(random_net_an1_TY) <- colnames(mat_RG_an1_TY)
+#   rownames(random_net_an1_TY) <- rownames(mat_RG_an1_TY)
+# 
+#   ID_an1_TY_eigen_rand <- met.eigen(random_net_an1_TY,
+#                                     binary = FALSE,
+#                                     sym = TRUE,
+#                                     df = glmdata_an1_TY %>% select(-eigen),
+#                                     dfid = 1) %>%
+#     filter(!ID %in% c("TY", "IT", "KR", "LK"))
+# 
+#   m_an1_TY_eigen_rand <- brm(data = ID_an1_TY_eigen_rand,
+#                              formula = eigen ~ CSI_TY + no_kin + rank,
+#                              family = zero_one_inflated_beta(),
+#                              prior = c(prior(student_t(4,0,15), class = "b"),
+#                                        prior(student_t(4,0,15), class = "Intercept")),
+#                              silent = 2,
+#                              refresh = 0,
+#                              backend = "cmdstanr")
+# 
+#   b_CSI_TY_an1[i] <- fixef(m_an1_TY_eigen_rand)[2,1]
+#   b_no_kin_an1_TY[i] <- fixef(m_an1_TY_eigen_rand)[3,1]
+#   b_rank_an1_TY[i] <- fixef(m_an1_TY_eigen_rand)[4,1]
+# }
+
+## 保存
+# saveRDS(b_CSI_TY_an1, "data/b_CSI_TY_an1.rds")
+# saveRDS(b_no_kin_an1_TY, "data/b_no_kin_an1_TY.rds")
+# saveRDS(b_rank_an1_TY, "data/b_rank_an1_TY.rds")
+
+## 読み込み  
+b_CSI_TY_an1 <- readRDS("data/b_CSI_TY_an1.rds")
+b_no_kin_an1_TY <- readRDS("data/b_no_kin_an1_TY.rds")
+b_rank_an1_TY <- readRDS("data/b_rank_an1_TY.rds")
+```
+
+###### 結果の確認  
+結果の表を作成します。  
+```{r}
+summary_an1_TY_eigen <- summary(m_an1_TY_eigen)
+
+model_parameters(m_an1_TY_eigen,  ci = 0.95,dispersion = TRUE,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "phi") %>% 
+  data.frame() %>%
+  dplyr::select(1,  3,4, 9)  %>% 
+  mutate("Bulk ESS" = summary_an1_TY_eigen$fixed$Bulk_ESS,
+         "Tail ESS" = summary_an1_TY_eigen$fixed$Tail_ESS) %>% 
+  mutate(`P left` = c(NA,
+                      mean(fixef(m_an1_TY_eigen)[2,1] < b_CSI_TY_an1),
+                      mean(fixef(m_an1_TY_eigen)[3,1] < b_no_kin_an1_TY),
+                      mean(fixef(m_an1_TY_eigen)[4,1] < b_rank_an1_TY))) %>% 
+  mutate(`P right` = c(NA,
+                      mean(fixef(m_an1_TY_eigen)[2,1] > b_CSI_TY_an1),
+                      mean(fixef(m_an1_TY_eigen)[3,1] > b_no_kin_an1_TY),
+                      mean(fixef(m_an1_TY_eigen)[4,1] > b_rank_an1_TY))) %>% 
+  select(1, 2, 3, 7, 8, everything()) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_CSI_TY" = "CSI with TY",
+                                                  "b_no_kin" = "No. of kin females in network",
+                                                  "b_rank" = "Ordinal rank"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_an1_TY_eigen
+
+table_an1_TY_eigen
+
+write_csv(table_an1_TY_eigen, "tables/table_an1_TY_eigen.csv")
+```
+<br/>  
+
+###### 結果の作図  
+最後に結果を作図します。  
+```{r}
+pred_an1_TY_eigen <- predict_response(m_an1_TY_eigen,
+                                      terms = "CSI_TY[0:5, by = 0.1]") %>% 
+  data.frame()
+
+glmdata_an1_TY %>% 
+  ggplot(aes(x = CSI_TY, y = eigen)) +
+  geom_line(data = pred_an1_TY_eigen,
+            aes(x = x, y = predicted)) +
+  geom_ribbon(data = pred_an1_TY_eigen,
+              aes(x = x, y = predicted,
+                  ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(shape = 1,
+             size = 3) +
+  theme_bw(base_size = 12) +
+  labs(x = "CSI with *TY*", y = "Eigenvector centrality",
+       title = "Network when *TY* was present (MS18 + MS19)") +
+  theme(aspect.ratio = 1,
+        text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman",
+                                      size = 10),
+        axis.title.x = element_markdown()) -> p_an1_TY_eigen
+
+p_an1_TY_eigen
+
+ggsave("figures/p_an1_TY_eigen.png", p_an1_TY_eigen,
+       width = 100, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  
+
+##### ITがいる日  
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+```{r}
+## データの作成 
+### 血縁個体数の算出  
+no_kin_an1_IT <- tidyr::crossing(femaleID = metrics_an1_IT$ID,
+         femaleID2 = metrics_an1_IT$ID) %>% 
+  filter(!femaleID %in% c("TY", "IT", "KR", "LK"),
+         !femaleID2 %in% c("TY", "IT", "KR", "LK")) %>% 
+  left_join(kin) %>% 
+  drop_na(kin) %>% 
+  group_by(femaleID) %>% 
+  summarise(no_kin = sum(kin >= 0.0625)) %>% 
+  ungroup()
+
+### データの整形と結合
+glmdata_an1_IT <- metrics_all_IT %>% 
+  filter(study_period == "MS18 + MS19") %>% 
+  arrange(rank) %>% 
+  mutate(rank = 1:n()) %>% 
+  select(ID, eigen, rank, CSI_IT) %>% 
+  left_join(no_kin_an1_IT,
+            by = c("ID" = "femaleID"))
+
+## モデルの実行  
+m_an1_IT_eigen <- brm(data = glmdata_an1_IT,
+                      formula = eigen ~ CSI_IT + no_kin + rank,
+                      family = zero_one_inflated_beta(),
+                      prior = c(prior(student_t(4,0,15), class = "b"),
+                                prior(student_t(4,0,15), class = "Intercept")),
+                      silent = 2,
+                      refresh = 0,
+                      backend = "cmdstanr",
+                      file = "model/m_an1_IT_eigen")
+```
+
+結果は以下の通りです。  
+```{r}
+model_parameters(m_an1_IT_eigen)
+```
+<br/>  
+
+続いて、500回ノードラベルパーミュテーションを行い、それぞれの係数を取得します。  
+```{r}
+# b_CSI_IT_an1 <- rep(0, 500)
+# b_no_kin_an1_IT <- rep(0, 500)
+# b_rank_an1_IT <- rep(0, 500)
+# 
+# set.seed(123)
+# pb = txtProgressBar(min = 1, max = 500, style = 3)
+# 
+# for(i in 1:500){
+#   setTxtProgressBar(pb, i)
+#   random_net_an1_IT <- rmperm(mat_RG_an1_IT)
+#   colnames(random_net_an1_IT) <- colnames(mat_RG_an1_IT)
+#   rownames(random_net_an1_IT) <- rownames(mat_RG_an1_IT)
+# 
+#   ID_an1_IT_eigen_rand <- met.eigen(random_net_an1_IT,
+#                                     binary = FALSE,
+#                                     sym = TRUE,
+#                                     df = glmdata_an1_IT %>% select(-eigen),
+#                                     dfid = 1) %>%
+#     filter(!ID %in% c("TY", "IT", "KR", "LK"))
+# 
+#   m_an1_IT_eigen_rand <- brm(data = ID_an1_IT_eigen_rand,
+#                              formula = eigen ~ CSI_IT + no_kin + rank,
+#                              family = zero_one_inflated_beta(),
+#                              prior = c(prior(student_t(4,0,15), class = "b"),
+#                                        prior(student_t(4,0,15), class = "Intercept")),
+#                              silent = 2,
+#                              refresh = 0,
+#                              backend = "cmdstanr")
+# 
+#   b_CSI_IT_an1[i] <- fixef(m_an1_IT_eigen_rand)[2,1]
+#   b_no_kin_an1_IT[i] <- fixef(m_an1_IT_eigen_rand)[3,1]
+#   b_rank_an1_IT[i] <- fixef(m_an1_IT_eigen_rand)[4,1]
+# }
+
+## 保存
+# saveRDS(b_CSI_IT_an1, "data/b_CSI_IT_an1.rds")
+# saveRDS(b_no_kin_an1_IT, "data/b_no_kin_an1_IT.rds")
+# saveRDS(b_rank_an1_IT, "data/b_rank_an1_IT.rds")
+
+## 読み込み  
+b_CSI_IT_an1 <- readRDS("data/b_CSI_IT_an1.rds")
+b_no_kin_an1_IT <- readRDS("data/b_no_kin_an1_IT.rds")
+b_rank_an1_IT <- readRDS("data/b_rank_an1_IT.rds")
+```
+
+###### 結果の確認  
+結果の表を作成します。  
+```{r}
+summary_an1_IT_eigen <- summary(m_an1_IT_eigen)
+
+model_parameters(m_an1_IT_eigen,  ci = 0.95,dispersion = TRUE,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "phi") %>% 
+  data.frame() %>%
+  dplyr::select(1,  3,4, 9)  %>% 
+  mutate("Bulk ESS" = summary_an1_IT_eigen$fixed$Bulk_ESS,
+         "Tail ESS" = summary_an1_IT_eigen$fixed$Tail_ESS) %>% 
+  mutate(`P left` = c(NA,
+                      mean(fixef(m_an1_IT_eigen)[2,1] < b_CSI_IT_an1),
+                      mean(fixef(m_an1_IT_eigen)[3,1] < b_no_kin_an1_IT),
+                      mean(fixef(m_an1_IT_eigen)[4,1] < b_rank_an1_IT))) %>% 
+  mutate(`P right` = c(NA,
+                      mean(fixef(m_an1_IT_eigen)[2,1] > b_CSI_IT_an1),
+                      mean(fixef(m_an1_IT_eigen)[3,1] > b_no_kin_an1_IT),
+                      mean(fixef(m_an1_IT_eigen)[4,1] > b_rank_an1_IT))) %>% 
+  select(1, 2, 3, 7, 8, everything()) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_CSI_IT" = "CSI with IT",
+                                                  "b_no_kin" = "No. of kin females in network",
+                                                  "b_rank" = "Ordinal rank"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_an1_IT_eigen
+
+table_an1_IT_eigen
+
+write_csv(table_an1_IT_eigen, "tables/table_an1_IT_eigen.csv")
+```
+<br/>  
+
+###### 結果の作図  
+最後に結果を作図します。  
+```{r}
+pred_an1_IT_eigen <- predict_response(m_an1_IT_eigen,
+                                      terms = "CSI_IT[0:4, by = 0.1]") %>% 
+  data.frame()
+
+glmdata_an1_IT %>% 
+  ggplot(aes(x = CSI_IT, y = eigen)) +
+  geom_line(data = pred_an1_IT_eigen,
+            aes(x = x, y = predicted)) +
+  geom_ribbon(data = pred_an1_IT_eigen,
+              aes(x = x, y = predicted,
+                  ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(shape = 1,
+             size = 3) +
+  theme_bw(base_size = 12) +
+  labs(x = "CSI with *IT*", y = "Eigenvector centraliIT",
+       title = "Network when *IT* was present (MS18 + MS19)") +
+  theme(aspect.ratio = 1,
+        text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman",
+                                      size = 10),
+        axis.title.x = element_markdown()) -> p_an1_IT_eigen
+
+p_an1_IT_eigen
+
+ggsave("figures/p_an1_IT_eigen.png", p_an1_IT_eigen,
+       width = 100, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  
+
+#### 交尾期(非発情・2020~2021)   
+##### TYがいる日  
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+```{r}
+## データの作成 
+### 血縁個体数の算出  
+no_kin_an2_TY <- tidyr::crossing(femaleID = metrics_an2_TY$ID,
+         femaleID2 = metrics_an2_TY$ID) %>% 
+  filter(!femaleID %in% c("TY", "IT", "KR", "LK"),
+         !femaleID2 %in% c("TY", "IT", "KR", "LK")) %>% 
+  left_join(kin) %>% 
+  drop_na(kin) %>% 
+  group_by(femaleID) %>% 
+  summarise(no_kin = sum(kin >= 0.0625)) %>% 
+  ungroup()
+
+### データの整形と結合
+glmdata_an2_TY <- metrics_all_TY %>% 
+  filter(study_period == "MS20 + MS21") %>% 
+  arrange(rank) %>% 
+  mutate(rank = 1:n()) %>% 
+  select(ID, eigen, rank, CSI_TY) %>% 
+  left_join(no_kin_an2_TY,
+            by = c("ID" = "femaleID"))
+
+## モデルの実行  
+m_an2_TY_eigen <- brm(data = glmdata_an2_TY,
+                      formula = eigen ~ CSI_TY + rank,
+                      family = zero_one_inflated_beta(),
+                      prior = c(prior(student_t(4,0,15), class = "b"),
+                                prior(student_t(4,0,15), class = "Intercept")),
+                      silent = 2,
+                      refresh = 0,
+                      backend = "cmdstanr",
+                      file = "model/m_an2_TY_eigen")
+```
+
+結果は以下の通りです。  
+```{r}
+model_parameters(m_an2_TY_eigen)
+```
+<br/>  
+
+続いて、500回ノードラベルパーミュテーションを行い、それぞれの係数を取得します。  
+```{r}
+# b_CSI_TY_an2 <- rep(0, 500)
+# b_rank_an2_TY <- rep(0, 500)
+# 
+# set.seed(123)
+# pb = txtProgressBar(min = 1, max = 500, style = 3)
+# 
+# for(i in 1:500){
+#   setTxtProgressBar(pb, i)
+#   random_net_an2_TY <- rmperm(mat_RG_an2_TY)
+#   colnames(random_net_an2_TY) <- colnames(mat_RG_an2_TY)
+#   rownames(random_net_an2_TY) <- rownames(mat_RG_an2_TY)
+# 
+#   ID_an2_TY_eigen_rand <- met.eigen(random_net_an2_TY,
+#                                     binary = FALSE,
+#                                     sym = TRUE,
+#                                     df = glmdata_an2_TY %>% select(-eigen),
+#                                     dfid = 1) %>%
+#     filter(!ID %in% c("TY", "IT", "KR", "LK"))
+# 
+#   m_an2_TY_eigen_rand <- brm(data = ID_an2_TY_eigen_rand,
+#                              formula = eigen ~ CSI_TY + rank,
+#                              family = zero_one_inflated_beta(),
+#                              prior = c(prior(student_t(4,0,15), class = "b"),
+#                                        prior(student_t(4,0,15), class = "Intercept")),
+#                              silent = 2,
+#                              refresh = 0,
+#                              backend = "cmdstanr")
+# 
+#   b_CSI_TY_an2[i] <- fixef(m_an2_TY_eigen_rand)[2,1]
+#   b_rank_an2_TY[i] <- fixef(m_an2_TY_eigen_rand)[3,1]
+# }
+
+## 保存
+# saveRDS(b_CSI_TY_an2, "data/b_CSI_TY_an2.rds")
+# saveRDS(b_rank_an2_TY, "data/b_rank_an2_TY.rds")
+
+## 読み込み  
+b_CSI_TY_an2 <- readRDS("data/b_CSI_TY_an2.rds")
+b_rank_an2_TY <- readRDS("data/b_rank_an2_TY.rds")
+```
+
+###### 結果の確認  
+結果の表を作成します。  
+```{r}
+summary_an2_TY_eigen <- summary(m_an2_TY_eigen)
+
+model_parameters(m_an2_TY_eigen,  ci = 0.95,dispersion = TRUE,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "phi") %>% 
+  data.frame() %>%
+  dplyr::select(1,  3,4, 9)  %>% 
+  mutate("Bulk ESS" = summary_an2_TY_eigen$fixed$Bulk_ESS,
+         "Tail ESS" = summary_an2_TY_eigen$fixed$Tail_ESS) %>% 
+  mutate(`P left` = c(NA,
+                      mean(fixef(m_an2_TY_eigen)[2,1] < b_CSI_TY_an2),
+                      mean(fixef(m_an2_TY_eigen)[3,1] < b_rank_an2_TY))) %>% 
+  mutate(`P right` = c(NA,
+                      mean(fixef(m_an2_TY_eigen)[2,1] > b_CSI_TY_an2),
+                      mean(fixef(m_an2_TY_eigen)[3,1] > b_rank_an2_TY))) %>% 
+  select(1, 2, 3, 7, 8, everything()) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_CSI_TY" = "CSI with TY",
+                                                  "b_no_kin" = "No. of kin females in network",
+                                                  "b_rank" = "Ordinal rank"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_an2_TY_eigen
+
+table_an2_TY_eigen
+
+write_csv(table_an2_TY_eigen, "tables/table_an2_TY_eigen.csv")
+```
+<br/>  
+
+###### 結果の作図  
+最後に結果を作図します。  
+```{r}
+pred_an2_TY_eigen <- predict_response(m_an2_TY_eigen,
+                                      terms = "CSI_TY[0:4, by = 0.1]") %>% 
+  data.frame()
+
+glmdata_an2_TY %>% 
+  ggplot(aes(x = CSI_TY, y = eigen)) +
+  geom_line(data = pred_an2_TY_eigen,
+            aes(x = x, y = predicted)) +
+  geom_ribbon(data = pred_an2_TY_eigen,
+              aes(x = x, y = predicted,
+                  ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(shape = 1,
+             size = 3) +
+  theme_bw(base_size = 12) +
+  labs(x = "CSI with *TY*", y = "Eigenvector centrality",
+       title = "Network when *TY* was present (MS18 + MS19)") +
+  theme(aspect.ratio = 1,
+        text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman",
+                                      size = 10),
+        axis.title.x = element_markdown()) -> p_an2_TY_eigen
+
+p_an2_TY_eigen
+
+ggsave("figures/p_an2_TY_eigen.png", p_an2_TY_eigen,
+       width = 100, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  
+
+##### ITがいる日  
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+```{r}
+## データの作成 
+### 血縁個体数の算出  
+no_kin_an2_IT <- tidyr::crossing(femaleID = metrics_an2_IT$ID,
+         femaleID2 = metrics_an2_IT$ID) %>% 
+  filter(!femaleID %in% c("TY", "IT", "KR", "LK"),
+         !femaleID2 %in% c("TY", "IT", "KR", "LK")) %>% 
+  left_join(kin) %>% 
+  drop_na(kin) %>% 
+  group_by(femaleID) %>% 
+  summarise(no_kin = sum(kin >= 0.0625)) %>% 
+  ungroup()
+
+### データの整形と結合
+glmdata_an2_IT <- metrics_all_IT %>% 
+  filter(study_period == "MS20") %>% 
+  arrange(rank) %>% 
+  mutate(rank = 1:n()) %>% 
+  select(ID, eigen, rank, CSI_IT) %>% 
+  left_join(no_kin_an2_IT,
+            by = c("ID" = "femaleID"))
+
+## モデルの実行  
+m_an2_IT_eigen <- brm(data = glmdata_an2_IT,
+                      formula = eigen ~ CSI_IT + rank,
+                      family = zero_one_inflated_beta(),
+                      prior = c(prior(student_t(4,0,15), class = "b"),
+                                prior(student_t(4,0,15), class = "Intercept")),
+                      silent = 2,
+                      refresh = 0,
+                      backend = "cmdstanr",
+                      file = "model/m_an2_IT_eigen")
+```
+
+結果は以下の通りです。  
+```{r}
+model_parameters(m_an2_IT_eigen)
+```
+<br/>  
+
+続いて、500回ノードラベルパーミュテーションを行い、それぞれの係数を取得します。  
+```{r}
+# b_CSI_IT_an2 <- rep(0, 500)
+# b_rank_an2_IT <- rep(0, 500)
+# 
+# set.seed(123)
+# pb = txtProgressBar(min = 1, max = 500, style = 3)
+# 
+# for(i in 1:500){
+#   setTxtProgressBar(pb, i)
+#   random_net_an2_IT <- rmperm(mat_RG_an2_IT)
+#   colnames(random_net_an2_IT) <- colnames(mat_RG_an2_IT)
+#   rownames(random_net_an2_IT) <- rownames(mat_RG_an2_IT)
+# 
+#   ID_an2_IT_eigen_rand <- met.eigen(random_net_an2_IT,
+#                                     binary = FALSE,
+#                                     sym = TRUE,
+#                                     df = glmdata_an2_IT %>% select(-eigen),
+#                                     dfid = 1) %>%
+#     filter(!ID %in% c("TY", "IT", "KR", "LK"))
+# 
+#   m_an2_IT_eigen_rand <- brm(data = ID_an2_IT_eigen_rand,
+#                              formula = eigen ~ CSI_IT + rank,
+#                              family = zero_one_inflated_beta(),
+#                              prior = c(prior(student_t(4,0,15), class = "b"),
+#                                        prior(student_t(4,0,15), class = "Intercept")),
+#                              silent = 2,
+#                              refresh = 0,
+#                              backend = "cmdstanr")
+# 
+#   b_CSI_IT_an2[i] <- fixef(m_an2_IT_eigen_rand)[2,1]
+#   b_rank_an2_IT[i] <- fixef(m_an2_IT_eigen_rand)[3,1]
+# }
+
+## 保存
+# saveRDS(b_CSI_IT_an2, "data/b_CSI_IT_an2.rds")
+# saveRDS(b_no_kin_an2_IT, "data/b_no_kin_an2_IT.rds")
+# saveRDS(b_rank_an2_IT, "data/b_rank_an2_IT.rds")
+
+## 読み込み  
+b_CSI_IT_an2 <- readRDS("data/b_CSI_IT_an2.rds")
+b_no_kin_an2_IT <- readRDS("data/b_no_kin_an2_IT.rds")
+b_rank_an2_IT <- readRDS("data/b_rank_an2_IT.rds")
+```
+
+###### 結果の確認  
+結果の表を作成します。  
+```{r}
+summary_an2_IT_eigen <- summary(m_an2_IT_eigen)
+
+model_parameters(m_an2_IT_eigen,  ci = 0.95,dispersion = TRUE,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "phi") %>% 
+  data.frame() %>%
+  dplyr::select(1,  3,4, 9)  %>% 
+  mutate("Bulk ESS" = summary_an2_IT_eigen$fixed$Bulk_ESS,
+         "Tail ESS" = summary_an2_IT_eigen$fixed$Tail_ESS) %>% 
+  mutate(`P left` = c(NA,
+                      mean(fixef(m_an2_IT_eigen)[2,1] < b_CSI_IT_an2),
+                      mean(fixef(m_an2_IT_eigen)[3,1] < b_no_kin_an2_IT),
+                      mean(fixef(m_an2_IT_eigen)[4,1] < b_rank_an2_IT))) %>% 
+  mutate(`P right` = c(NA,
+                      mean(fixef(m_an2_IT_eigen)[2,1] > b_CSI_IT_an2),
+                      mean(fixef(m_an2_IT_eigen)[3,1] > b_no_kin_an2_IT),
+                      mean(fixef(m_an2_IT_eigen)[4,1] > b_rank_an2_IT))) %>% 
+  select(1, 2, 3, 7, 8, everything()) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_CSI_IT" = "CSI with IT",
+                                                  "b_no_kin" = "No. of kin females in network",
+                                                  "b_rank" = "Ordinal rank"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_an2_IT_eigen
+
+table_an2_IT_eigen
+
+write_csv(table_an2_IT_eigen, "tables/table_an2_IT_eigen.csv")
+```
+<br/>  
+
+###### 結果の作図  
+最後に結果を作図します。  
+```{r}
+pred_an2_IT_eigen <- predict_response(m_an2_IT_eigen,
+                                      terms = "CSI_IT[0:4, by = 0.1]") %>% 
+  data.frame()
+
+glmdata_an2_IT %>% 
+  ggplot(aes(x = CSI_IT, y = eigen)) +
+  geom_line(data = pred_an2_IT_eigen,
+            aes(x = x, y = predicted)) +
+  geom_ribbon(data = pred_an2_IT_eigen,
+              aes(x = x, y = predicted,
+                  ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(shape = 1,
+             size = 3) +
+  theme_bw(base_size = 12) +
+  labs(x = "CSI with *IT*", y = "Eigenvector centraliIT",
+       title = "Network when *IT* was present (MS18 + MS19)") +
+  theme(aspect.ratio = 1,
+        text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman",
+                                      size = 10),
+        axis.title.x = element_markdown()) -> p_an2_IT_eigen
+
+p_an2_IT_eigen
+
+ggsave("figures/p_an2_IT_eigen.png", p_an2_IT_eigen,
+       width = 100, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  
+
+#### 非交尾期   
+##### TYがいる日  
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+```{r}
+## データの作成 
+### 血縁個体数の算出  
+no_kin_nm_TY <- tidyr::crossing(femaleID = metrics_nm_TY$ID,
+         femaleID2 = metrics_nm_TY$ID) %>% 
+  filter(!femaleID %in% c("TY", "IT", "KR", "LK"),
+         !femaleID2 %in% c("TY", "IT", "KR", "LK")) %>% 
+  left_join(kin) %>% 
+  drop_na(kin) %>% 
+  group_by(femaleID) %>% 
+  summarise(no_kin = sum(kin >= 0.0625)) %>% 
+  ungroup()
+
+### データの整形と結合
+glmdata_nm_TY <- metrics_all_TY %>% 
+  filter(study_period == "NMS") %>% 
+  arrange(rank) %>% 
+  mutate(rank = 1:n()) %>% 
+  select(ID, eigen, rank, CSI_TY) %>% 
+  left_join(no_kin_nm_TY,
+            by = c("ID" = "femaleID"))
+
+## モデルの実行  
+m_nm_TY_eigen <- brm(data = glmdata_nm_TY,
+                      formula = eigen ~ CSI_TY + no_kin + rank,
+                      family = zero_one_inflated_beta(),
+                      prior = c(prior(student_t(4,0,15), class = "b"),
+                                prior(student_t(4,0,15), class = "Intercept")),
+                      silent = 2,
+                      refresh = 0,
+                      backend = "cmdstanr",
+                      file = "model/m_nm_TY_eigen")
+```
+
+結果は以下の通りです。  
+```{r}
+model_parameters(m_nm_TY_eigen)
+```
+<br/>  
+
+続いて、500回ノードラベルパーミュテーションを行い、それぞれの係数を取得します。  
+```{r}
+# b_CSI_TY_nm <- rep(0, 500)
+# b_no_kin_nm_TY <- rep(0, 500)
+# b_rank_nm_TY <- rep(0, 500)
+# 
+# set.seed(123)
+# pb = txtProgressBar(min = 1, max = 500, style = 3)
+# 
+# for(i in 1:500){
+#   setTxtProgressBar(pb, i)
+#   random_net_nm_TY <- rmperm(mat_RG_nm_TY)
+#   colnames(random_net_nm_TY) <- colnames(mat_RG_nm_TY)
+#   rownames(random_net_nm_TY) <- rownames(mat_RG_nm_TY)
+# 
+#   ID_nm_TY_eigen_rand <- met.eigen(random_net_nm_TY,
+#                                     binary = FALSE,
+#                                     sym = TRUE,
+#                                     df = glmdata_nm_TY %>% select(-eigen),
+#                                     dfid = 1) %>%
+#     filter(!ID %in% c("TY", "IT", "KR", "LK"))
+# 
+#   m_nm_TY_eigen_rand <- brm(data = ID_nm_TY_eigen_rand,
+#                              formula = eigen ~ CSI_TY + no_kin + rank,
+#                              family = zero_one_inflated_beta(),
+#                              prior = c(prior(student_t(4,0,15), class = "b"),
+#                                        prior(student_t(4,0,15), class = "Intercept")),
+#                              silent = 2,
+#                              refresh = 0,
+#                              backend = "cmdstanr")
+# 
+#   b_CSI_TY_nm[i] <- fixef(m_nm_TY_eigen_rand)[2,1]
+#   b_no_kin_nm_TY[i] <- fixef(m_nm_TY_eigen_rand)[3,1]
+#   b_rank_nm_TY[i] <- fixef(m_nm_TY_eigen_rand)[4,1]
+# }
+
+## 保存
+saveRDS(b_CSI_TY_nm, "data/b_CSI_TY_nm.rds")
+saveRDS(b_no_kin_nm_TY, "data/b_no_kin_nm_TY.rds")
+saveRDS(b_rank_nm_TY, "data/b_rank_nm_TY.rds")
+
+## 読み込み  
+b_CSI_TY_nm <- readRDS("data/b_CSI_TY_nm.rds")
+b_no_kin_nm_TY <- readRDS("data/b_no_kin_nm_TY.rds")
+b_rank_nm_TY <- readRDS("data/b_rank_nm_TY.rds")
+```
+
+###### 結果の確認  
+結果の表を作成します。  
+```{r}
+summary_nm_TY_eigen <- summary(m_nm_TY_eigen)
+
+model_parameters(m_nm_TY_eigen,  ci = 0.95,dispersion = TRUE,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "phi") %>% 
+  data.frame() %>%
+  dplyr::select(1,  3,4, 9)  %>% 
+  mutate("Bulk ESS" = summary_nm_TY_eigen$fixed$Bulk_ESS,
+         "Tail ESS" = summary_nm_TY_eigen$fixed$Tail_ESS) %>% 
+  mutate(`P left` = c(NA,
+                      mean(fixef(m_nm_TY_eigen)[2,1] < b_CSI_TY_nm),
+                      mean(fixef(m_nm_TY_eigen)[3,1] < b_no_kin_nm_TY),
+                      mean(fixef(m_nm_TY_eigen)[4,1] < b_rank_nm_TY))) %>% 
+  mutate(`P right` = c(NA,
+                      mean(fixef(m_nm_TY_eigen)[2,1] > b_CSI_TY_nm),
+                      mean(fixef(m_nm_TY_eigen)[3,1] > b_no_kin_nm_TY),
+                      mean(fixef(m_nm_TY_eigen)[4,1] > b_rank_nm_TY))) %>% 
+  select(1, 2, 3, 7, 8, everything()) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_CSI_TY" = "CSI with TY",
+                                                  "b_no_kin" = "No. of kin females in network",
+                                                  "b_rank" = "Ordinal rank"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_nm_TY_eigen
+
+table_nm_TY_eigen
+
+write_csv(table_nm_TY_eigen, "tables/table_nm_TY_eigen.csv")
+```
+<br/>  
+
+###### 結果の作図  
+最後に結果を作図します。  
+```{r}
+pred_nm_TY_eigen <- predict_response(m_nm_TY_eigen,
+                                      terms = "CSI_TY[0:5, by = 0.1]") %>% 
+  data.frame()
+
+glmdata_nm_TY %>% 
+  ggplot(aes(x = CSI_TY, y = eigen)) +
+  geom_line(data = pred_nm_TY_eigen,
+            aes(x = x, y = predicted)) +
+  geom_ribbon(data = pred_nm_TY_eigen,
+              aes(x = x, y = predicted,
+                  ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(shape = 1,
+             size = 3) +
+  theme_bw(base_size = 12) +
+  labs(x = "CSI with *TY*", y = "Eigenvector centrality",
+       title = "Network when *TY* was present (MS18 + MS19)") +
+  theme(aspect.ratio = 1,
+        text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman",
+                                      size = 10),
+        axis.title.x = element_markdown()) -> p_nm_TY_eigen
+
+p_nm_TY_eigen
+
+ggsave("figures/p_nm_TY_eigen.png", p_nm_TY_eigen,
+       width = 100, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  
+
+##### ITがいる日  
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+###### モデリング  
+まず、実際のネットワークを用いてGLMを実行します。    
+```{r}
+## データの作成 
+### 血縁個体数の算出  
+no_kin_nm_IT <- tidyr::crossing(femaleID = metrics_nm_IT$ID,
+         femaleID2 = metrics_nm_IT$ID) %>% 
+  filter(!femaleID %in% c("TY", "IT", "KR", "LK"),
+         !femaleID2 %in% c("TY", "IT", "KR", "LK")) %>% 
+  left_join(kin) %>% 
+  drop_na(kin) %>% 
+  group_by(femaleID) %>% 
+  summarise(no_kin = sum(kin >= 0.0625)) %>% 
+  ungroup()
+
+### データの整形と結合
+glmdata_nm_IT <- metrics_all_IT %>% 
+  filter(study_period == "NMS") %>% 
+  arrange(rank) %>% 
+  mutate(rank = 1:n()) %>% 
+  select(ID, eigen, rank, CSI_IT) %>% 
+  left_join(no_kin_nm_IT,
+            by = c("ID" = "femaleID"))
+
+## モデルの実行  
+m_nm_IT_eigen <- brm(data = glmdata_nm_IT,
+                      formula = eigen ~ CSI_IT + no_kin + rank,
+                      family = zero_one_inflated_beta(),
+                      prior = c(prior(student_t(4,0,15), class = "b"),
+                                prior(student_t(4,0,15), class = "Intercept")),
+                      silent = 2,
+                      refresh = 0,
+                      backend = "cmdstanr",
+                      file = "model/m_nm_IT_eigen")
+```
+
+結果は以下の通りです。  
+```{r}
+model_parameters(m_nm_IT_eigen)
+```
+<br/>  
+
+続いて、500回ノードラベルパーミュテーションを行い、それぞれの係数を取得します。  
+```{r}
+# b_CSI_IT_nm <- rep(0, 500)
+# b_no_kin_nm_IT <- rep(0, 500)
+# b_rank_nm_IT <- rep(0, 500)
+# 
+# set.seed(123)
+# pb = txtProgressBar(min = 1, max = 500, style = 3)
+# 
+# for(i in 1:500){
+#   setTxtProgressBar(pb, i)
+#   random_net_nm_IT <- rmperm(mat_RG_nm_IT)
+#   colnames(random_net_nm_IT) <- colnames(mat_RG_nm_IT)
+#   rownames(random_net_nm_IT) <- rownames(mat_RG_nm_IT)
+# 
+#   ID_nm_IT_eigen_rand <- met.eigen(random_net_nm_IT,
+#                                     binary = FALSE,
+#                                     sym = TRUE,
+#                                     df = glmdata_nm_IT %>% select(-eigen),
+#                                     dfid = 1) %>%
+#     filter(!ID %in% c("TY", "IT", "KR", "LK"))
+# 
+#   m_nm_IT_eigen_rand <- brm(data = ID_nm_IT_eigen_rand,
+#                              formula = eigen ~ CSI_IT + no_kin + rank,
+#                              family = zero_one_inflated_beta(),
+#                              prior = c(prior(student_t(4,0,15), class = "b"),
+#                                        prior(student_t(4,0,15), class = "Intercept")),
+#                              silent = 2,
+#                              refresh = 0,
+#                              backend = "cmdstanr")
+# 
+#   b_CSI_IT_nm[i] <- fixef(m_nm_IT_eigen_rand)[2,1]
+#   b_no_kin_nm_IT[i] <- fixef(m_nm_IT_eigen_rand)[3,1]
+#   b_rank_nm_IT[i] <- fixef(m_nm_IT_eigen_rand)[4,1]
+# }
+
+## 保存
+saveRDS(b_CSI_IT_nm, "data/b_CSI_IT_nm.rds")
+saveRDS(b_no_kin_nm_IT, "data/b_no_kin_nm_IT.rds")
+saveRDS(b_rank_nm_IT, "data/b_rank_nm_IT.rds")
+
+## 読み込み  
+b_CSI_IT_nm <- readRDS("data/b_CSI_IT_nm.rds")
+b_no_kin_nm_IT <- readRDS("data/b_no_kin_nm_IT.rds")
+b_rank_nm_IT <- readRDS("data/b_rank_nm_IT.rds")
+```
+
+###### 結果の確認  
+結果の表を作成します。  
+```{r}
+summary_nm_IT_eigen <- summary(m_nm_IT_eigen)
+
+model_parameters(m_nm_IT_eigen,  ci = 0.95,dispersion = TRUE,
+                 centrality = "median", ci_method = "eti") %>% 
+  filter(Parameter != "phi") %>% 
+  data.frame() %>%
+  dplyr::select(1,  3,4, 9)  %>% 
+  mutate("Bulk ESS" = summary_nm_IT_eigen$fixed$Bulk_ESS,
+         "Tail ESS" = summary_nm_IT_eigen$fixed$Tail_ESS) %>% 
+  mutate(`P left` = c(NA,
+                      mean(fixef(m_nm_IT_eigen)[2,1] < b_CSI_IT_nm),
+                      mean(fixef(m_nm_IT_eigen)[3,1] < b_no_kin_nm_IT),
+                      mean(fixef(m_nm_IT_eigen)[4,1] < b_rank_nm_IT))) %>% 
+  mutate(`P right` = c(NA,
+                      mean(fixef(m_nm_IT_eigen)[2,1] > b_CSI_IT_nm),
+                      mean(fixef(m_nm_IT_eigen)[3,1] > b_no_kin_nm_IT),
+                      mean(fixef(m_nm_IT_eigen)[4,1] > b_rank_nm_IT))) %>% 
+  select(1, 2, 3, 7, 8, everything()) %>% 
+  mutate(Parameter = str_replace_all(Parameter, c("b_Intercept"="Intercept",
+                                                  "b_CSI_IT" = "CSI with IT",
+                                                  "b_no_kin" = "No. of kin females in network",
+                                                  "b_rank" = "Ordinal rank"))) %>% 
+  rename("Explanatory variables" = "Parameter") %>% 
+  mutate(across(where(is.numeric), ~sprintf("%.2f", .))) -> table_nm_IT_eigen
+
+table_nm_IT_eigen
+
+write_csv(table_nm_IT_eigen, "tables/table_nm_IT_eigen.csv")
+```
+<br/>  
+
+###### 結果の作図  
+最後に結果を作図します。  
+```{r}
+pred_nm_IT_eigen <- predict_response(m_nm_IT_eigen,
+                                      terms = "CSI_IT[0:4, by = 0.1]") %>% 
+  data.frame()
+
+glmdata_nm_IT %>% 
+  ggplot(aes(x = CSI_IT, y = eigen)) +
+  geom_line(data = pred_nm_IT_eigen,
+            aes(x = x, y = predicted)) +
+  geom_ribbon(data = pred_nm_IT_eigen,
+              aes(x = x, y = predicted,
+                  ymin = conf.low, ymax = conf.high),
+              alpha = 0.2) +
+  geom_point(shape = 1,
+             size = 3) +
+  theme_bw(base_size = 12) +
+  labs(x = "CSI with *IT*", y = "Eigenvector centraliIT",
+       title = "Network when *IT* was present (NMS)") +
+  theme(aspect.ratio = 1,
+        text = element_text(family = "Times New Roman"),
+        plot.title = element_markdown(family = "Times New Roman",
+                                      size = 10),
+        axis.title.x = element_markdown()) -> p_nm_IT_eigen
+
+p_nm_IT_eigen
+
+ggsave("figures/p_nm_IT_eigen.png", p_nm_IT_eigen,
+       width = 100, height = 100, units = "mm", dpi = 1000)
+```
+<br/>  

@@ -1,0 +1,5 @@
+Explanatory variables,Median,MAD,P left,P right,Rhat,Bulk ESS,Tail ESS
+Intercept,0.51,0.55,NA,NA,1.00,3740.40,3043.99
+CSI with IT,0.07,0.17,0.35,0.65,1.00,4913.45,3010.14
+No. of kin females in network,0.22,0.12,0.07,0.93,1.00,4196.39,2527.59
+Ordinal rank,-0.07,0.05,0.90,0.10,1.00,3732.19,3056.35
